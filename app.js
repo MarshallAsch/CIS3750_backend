@@ -10,6 +10,7 @@ var users = require("./routes/users");
 
 var app = express();
 
+require('dotenv').config({path: ".config.env"});
 
 var port = process.env.PORT || 3000;
 var dbHost = process.env.DBHOST || "localhost";

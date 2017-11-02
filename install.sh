@@ -18,8 +18,8 @@ else
     exit
 fi
 
+nmp install
 
-echo -e "\e[31mCHANGE THE DEFAULT USERNAME AND PASSWORD BEFORE IT IS IN PRODUCTION!!!\e[39m"
 
 echo -n "SQL root username(cis3750_node): "
 read rootUser
@@ -31,10 +31,17 @@ read DBUSERNAME
 echo -n "Database password(team31): "
 read DBPASSWORD
 
-
 echo -n "Database name(cis3750): "
 read DBNAME
 
+echo ""
+echo -n "Database testing username(cis3750_node_test): "
+read DBUSERNAME_TEST
+echo -n "Database testing password(team31): "
+read DBPASSWORD_TEST
+
+echo -n "Database testing name(cis3750_test): "
+read DBNAME_TEST
 
 
 if [[ -z "$DBUSERNAME" ]]; then
@@ -49,18 +56,31 @@ if [[ -z "$DBNAME" ]]; then
     DBNAME="cis3750"
 fi
 
+if [[ -z "$DBUSERNAME_TEST" ]]; then
+    DBUSERNAME_TEST="cis3750_node_test"
+fi
+
+if [[ -z "$DBPASSWORD_TEST" ]]; then
+    DBPASSWORD_TEST="team31"
+fi
+
+if [[ -z "$DBNAME_TEST" ]]; then
+    DBNAME_TEST="cis3750_test"
+fi
 
 # replace the username and password in the script with the ones given here
 
+# create production database
 TEMP=`mktemp` || exit 1
-
 sed -e "s/{{USERNAME}}/$DBUSERNAME/g" -e "s/{{PASSWORD}}/$DBPASSWORD/g"  -e "s/{{DATABASE}}/$DBNAME/g" script.sql > $TEMP
-
 cat $TEMP
-
-
 mysql -u $rootUser --host $DBHOST -p$rootPass < $TEMP
 
+# create test database
+TEMP=`mktemp` || exit 1
+sed -e "s/{{USERNAME}}/$DBUSERNAME_TEST/g" -e "s/{{PASSWORD}}/$DBPASSWORD_TEST/g"  -e "s/{{DATABASE}}/$DBNAME_TEST/g" script.sql > $TEMP
+cat $TEMP
+mysql -u $rootUser --host $DBHOST -p$rootPass < $TEMP
 
 
 # check and create the init.d script here
