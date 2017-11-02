@@ -38,15 +38,15 @@ read DBNAME
 
 
 if [[ -z "$DBUSERNAME" ]]; then
-	DBUSERNAME="cis3750_node"
+    DBUSERNAME="cis3750_node"
 fi
 
 if [[ -z "$DBPASSWORD" ]]; then
-	DBPASSWORD="team31"
+    DBPASSWORD="team31"
 fi
 
 if [[ -z "$DBNAME" ]]; then
-	DBNAME="cis3750"
+    DBNAME="cis3750"
 fi
 
 
@@ -64,9 +64,3 @@ mysql -u $rootUser --host $DBHOST -p$rootPass < $TEMP
 
 
 # check and create the init.d script here
-
-
-
-
-
-
