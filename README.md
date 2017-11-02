@@ -3,10 +3,10 @@
 
 This is a [node.js](https://nodejs.org) RESTfull API that has a [MySQL](https://www.mysql.com/)  database.
 
-This is bing created by @marshallasch, @foxcroftjn, @alairon and @adriancdalessandro.
+This is bing created by [Marshall Asch](https://github.com/MarshallAsch/), [Jeremy Foxcroft](https://github.com/foxcroftjn/), [Ambrose Lai](https://github.com/alairon/) and [Adrian D'Alessandro](https://github.com/adriancdalessandro/).
 
 
-This project is being developed in partnership with @jordones, @PresumablyZach, @rrintjem, and @xXx360noScopesMLGPROxXx
+This project is being developed in partnership with [Jordon Smith](https://github.com/jordones/), [Zach Gyorffy](https://github.com/PresumablyZach/), [Robyn](https://github.com/rrintjem/), and [Francis](https://github.com/xXx360noScopesMLGPROxXx/)
 who are working on the [mobile app](https://github.com/jordones/CLC-mobile).
 
 ## Installation
