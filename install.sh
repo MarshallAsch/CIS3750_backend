@@ -18,18 +18,21 @@ else
     exit
 fi
 
-nmp install
+npm install
 
 
-echo -n "SQL root username(cis3750_node): "
+echo -n "SQL root username(): "
 read rootUser
-echo -n "SQL root password(team31): "
+echo -n "SQL root password(): "
 read rootPass
 
 echo -n "Database username(cis3750_node): "
 read DBUSERNAME
 echo -n "Database password(team31): "
 read DBPASSWORD
+
+echo -n "Database host(localhost): "
+read DBHOST
 
 echo -n "Database name(cis3750): "
 read DBNAME
@@ -43,6 +46,9 @@ read DBPASSWORD_TEST
 echo -n "Database testing name(cis3750_test): "
 read DBNAME_TEST
 
+if [[ -z "$DBHOST" ]]; then
+    DBHOST="localhost"
+fi
 
 if [[ -z "$DBUSERNAME" ]]; then
     DBUSERNAME="cis3750_node"

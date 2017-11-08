@@ -40,6 +40,13 @@ CREATE TABLE IF NOT EXISTS `clientMappings` (
 	CONSTRAINT `clientMappings_fk1` FOREIGN KEY (`supportWorker`) REFERENCES `Users`(`ID`)
 ) ENGINE=INNODB;
 
+CREATE TABLE IF NOT EXISTS `Drug` (
+	`ID` int NOT NULL AUTO_INCREMENT UNIQUE,
+	`name` TEXT NOT NULL,
+	PRIMARY KEY (`ID`)
+) ENGINE=INNODB;
+
+
 CREATE TABLE IF NOT EXISTS `schedule` (
 	`ID` int NOT NULL AUTO_INCREMENT,
 	`client` int NOT NULL,
@@ -56,11 +63,6 @@ CREATE TABLE IF NOT EXISTS `schedule` (
 	CONSTRAINT `schedule_fk1` FOREIGN KEY (`drug`) REFERENCES `Drug`(`ID`)
 ) ENGINE=INNODB;
 
-CREATE TABLE IF NOT EXISTS `Drug` (
-	`ID` int NOT NULL AUTO_INCREMENT UNIQUE,
-	`name` TEXT NOT NULL,
-	PRIMARY KEY (`ID`)
-) ENGINE=INNODB;
 
 CREATE TABLE IF NOT EXISTS `dose` (
 	`scheduleID` int NOT NULL,
@@ -95,6 +97,13 @@ CREATE TABLE IF NOT EXISTS `doseTaken` (
 	CONSTRAINT `doseTaken_fk1` FOREIGN KEY (`doseID`) REFERENCES `dose`(`doseID`)
 ) ENGINE=INNODB;
 
+CREATE TABLE IF NOT EXISTS `mood` (
+	`ID` int NOT NULL AUTO_INCREMENT,
+	`name` varchar(120) NOT NULL,
+	`icon` varchar(256),
+	PRIMARY KEY (`ID`)
+) ENGINE=INNODB;
+
 CREATE TABLE IF NOT EXISTS `moodEntries` (
 	`client` int NOT NULL,
 	`time` DATETIME NOT NULL,
@@ -103,13 +112,6 @@ CREATE TABLE IF NOT EXISTS `moodEntries` (
 	PRIMARY KEY (`client`,`time`),
 	CONSTRAINT `moodEntries_fk0` FOREIGN KEY (`client`) REFERENCES `Users`(`ID`),
 	CONSTRAINT `moodEntries_fk1` FOREIGN KEY (`status`) REFERENCES `mood`(`ID`)
-) ENGINE=INNODB;
-
-CREATE TABLE IF NOT EXISTS `mood` (
-	`ID` int NOT NULL AUTO_INCREMENT,
-	`name` varchar(120) NOT NULL,
-	`icon` varchar(256),
-	PRIMARY KEY (`ID`)
 ) ENGINE=INNODB;
 
 CREATE TABLE IF NOT EXISTS `notifications` (
