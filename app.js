@@ -8,12 +8,12 @@ var bodyParser = require("body-parser");
 var fs = require('fs');
 var https = require("https");
 
-var index = require("./routes/index");
-var users = require("./routes/users");
+var index = require(__dirname + "/routes/index");
+var users = require(__dirname + "/routes/users");
 
 
-var privateKey  = fs.readFileSync('sslcert/live/server.key', 'utf8');
-var certificate = fs.readFileSync('sslcert/live/server.crt', 'utf8');
+var privateKey  = fs.readFileSync(__dirname + '/sslcert/live/server.key', 'utf8');
+var certificate = fs.readFileSync(__dirname + '/sslcert/live/server.crt', 'utf8');
 var credentials = {key: privateKey, cert: certificate};
 
 var app = express();
