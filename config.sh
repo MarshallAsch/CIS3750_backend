@@ -78,12 +78,18 @@ if [[ "$prod" -eq "1"  ]]; then
         echo "Missing password, ending... "
         exit 1
     fi
+
+    sed -e "s/{{PORT}}/$PORT/g"  \
+    -e "s/{{DBHOST}}/$DBHOST/g"  \
+    -e "s/{{DBNAME}}/$DBNAME/g" \
+    -e "s/{{DBUSERNAME}}/$DBUSERNAME/g" \
+    -e "s/{{DBPASSWORD}}/$DBPASSWORD/g" config.env.example > config.env
 fi
 
 
 # get the database access info for the testing database
 if [[ "$prod" -eq "0"  ]]; then
-    echo -n "testing port (3001)): "
+    echo -n "testing port (3001): "
     read PORT
     echo -n "Database host for testing (localhost): "
     read DBHOST
@@ -110,22 +116,20 @@ if [[ "$prod" -eq "0"  ]]; then
         DBUSERNAME="cis3750_node_test"
     fi
 
-    if [[ -z "$DBPASSWORD_TEST" ]]; then
+    if [[ -z "$DBPASSWORD" ]]; then
         echo "Missing password, ending... "
         exit 1
     fi
 
-fi
-
-
-#add something to start the init.d service here
-
-sed -e "s/{{PORT}}/$PORT/g"  \
+    sed -e "s/{{PORT}}/$PORT/g"  \
     -e "s/{{DBHOST}}/$DBHOST/g"  \
     -e "s/{{DBNAME}}/$DBNAME/g" \
     -e "s/{{DBUSERNAME}}/$DBUSERNAME/g" \
-    -e "s/{{DBPASSWORD}}/$DBPASSWORD/g"
-    config.env.example > config.env
+    -e "s/{{DBPASSWORD}}/$DBPASSWORD/g" config.env.example > config.env
 
 
-node app.js
+    node app.js
+fi
+
+
+
