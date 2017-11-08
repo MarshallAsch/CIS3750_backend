@@ -5,8 +5,16 @@ var logger = require("morgan");
 var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
 
+var fs = require('fs');
+var https = require("https");
+
 var index = require("./routes/index");
 var users = require("./routes/users");
+
+
+var privateKey  = fs.readFileSync('sslcert/live/server.key', 'utf8');
+var certificate = fs.readFileSync('sslcert/live/server.crt', 'utf8');
+var credentials = {key: privateKey, cert: certificate};
 
 var app = express();
 
@@ -74,5 +82,7 @@ app.use(function(err, req, res, next) {
 module.exports = app;
 
 
-app.listen(port);
+
+https.createServer(credentials, app).listen(port);
+
 console.log("Magic happens on port " + port);

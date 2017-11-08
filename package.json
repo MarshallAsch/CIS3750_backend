@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "This is a node.js backed created for a CIS3750 assignment that is for Community Living Cambridge.",
   "private": true,
   "main": "",

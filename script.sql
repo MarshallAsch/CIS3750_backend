@@ -12,7 +12,7 @@ USE `{{DATABASE}}`;
 
 # The rest of the commands are to create the tables they does not yet exist
 
-CREATE TABLE IF NOT EXISTS `Users` (
+CREATE TABLE IF NOT EXISTS `users` (
 	`ID` int NOT NULL AUTO_INCREMENT UNIQUE,
 	`enabled` bool NOT NULL,
 	`supportWorker` bool NOT NULL,
@@ -36,11 +36,11 @@ CREATE TABLE IF NOT EXISTS `clientMappings` (
 	`client` int NOT NULL,
 	`supportWorker` int NOT NULL,
 	PRIMARY KEY (`client`,`supportWorker`),
-	CONSTRAINT `clientMappings_fk0` FOREIGN KEY (`client`) REFERENCES `Users`(`ID`),
-	CONSTRAINT `clientMappings_fk1` FOREIGN KEY (`supportWorker`) REFERENCES `Users`(`ID`)
+	CONSTRAINT `clientMappings_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`),
+	CONSTRAINT `clientMappings_fk1` FOREIGN KEY (`supportWorker`) REFERENCES `users`(`ID`)
 ) ENGINE=INNODB;
 
-CREATE TABLE IF NOT EXISTS `Drug` (
+CREATE TABLE IF NOT EXISTS `drug` (
 	`ID` int NOT NULL AUTO_INCREMENT UNIQUE,
 	`name` TEXT NOT NULL,
 	PRIMARY KEY (`ID`)
@@ -59,8 +59,8 @@ CREATE TABLE IF NOT EXISTS `schedule` (
 	`createDate` DATETIME NOT NULL,
 	`endDate` DATE NOT NULL,
 	PRIMARY KEY (`ID`),
-	CONSTRAINT `schedule_fk0` FOREIGN KEY (`client`) REFERENCES `Users`(`ID`),
-	CONSTRAINT `schedule_fk1` FOREIGN KEY (`drug`) REFERENCES `Drug`(`ID`)
+	CONSTRAINT `schedule_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`),
+	CONSTRAINT `schedule_fk1` FOREIGN KEY (`drug`) REFERENCES `drug`(`ID`)
 ) ENGINE=INNODB;
 
 
@@ -83,8 +83,8 @@ CREATE TABLE IF NOT EXISTS `schedulePermissions` (
 	`mandatory` bool NOT NULL DEFAULT FALSE,
 	PRIMARY KEY (`scheduleID`,`userID`,`clientID`),
 	CONSTRAINT `schedulePermissions_fk0` FOREIGN KEY (`scheduleID`) REFERENCES `schedule`(`ID`),
-	CONSTRAINT `schedulePermissions_fk1` FOREIGN KEY (`userID`) REFERENCES `Users`(`ID`),
-	CONSTRAINT `schedulePermissions_fk2` FOREIGN KEY (`clientID`) REFERENCES `Users`(`ID`)
+	CONSTRAINT `schedulePermissions_fk1` FOREIGN KEY (`userID`) REFERENCES `users`(`ID`),
+	CONSTRAINT `schedulePermissions_fk2` FOREIGN KEY (`clientID`) REFERENCES `users`(`ID`)
 ) ENGINE=INNODB;
 
 CREATE TABLE IF NOT EXISTS `doseTaken` (
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS `moodEntries` (
 	`comments` varchar(256),
 	`status` int NOT NULL,
 	PRIMARY KEY (`client`,`time`),
-	CONSTRAINT `moodEntries_fk0` FOREIGN KEY (`client`) REFERENCES `Users`(`ID`),
+	CONSTRAINT `moodEntries_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`),
 	CONSTRAINT `moodEntries_fk1` FOREIGN KEY (`status`) REFERENCES `mood`(`ID`)
 ) ENGINE=INNODB;
 
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 	`late` bool NOT NULL DEFAULT FALSE,
 	`early` bool NOT NULL DEFAULT FALSE,
 	PRIMARY KEY (`clientID`,`doseID`,`scheduleID`),
-	CONSTRAINT `notifications_fk0` FOREIGN KEY (`clientID`) REFERENCES `Users`(`ID`),
+	CONSTRAINT `notifications_fk0` FOREIGN KEY (`clientID`) REFERENCES `users`(`ID`),
 	CONSTRAINT `notifications_fk1` FOREIGN KEY (`doseID`) REFERENCES `dose`(`doseID`),
 	CONSTRAINT `notifications_fk2` FOREIGN KEY (`scheduleID`) REFERENCES `schedule`(`ID`)
 ) ENGINE=INNODB;

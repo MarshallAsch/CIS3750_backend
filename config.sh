@@ -84,6 +84,11 @@ if [[ "$prod" -eq "1"  ]]; then
     -e "s/{{DBNAME}}/$DBNAME/g" \
     -e "s/{{DBUSERNAME}}/$DBUSERNAME/g" \
     -e "s/{{DBPASSWORD}}/$DBPASSWORD/g" config.env.example > config.env
+
+    DIR=`pwd`
+
+    ln -s "/etc/letsencrypt/live/cis3750.marshallasch.ca/privkey.pem" "${DIR}/sslcert/live/server.key"
+    ln -s "/etc/letsencrypt/live/cis3750.marshallasch.ca/fullchain.pem" "${DIR}/sslcert/live/server.crt"
 fi
 
 
@@ -127,9 +132,10 @@ if [[ "$prod" -eq "0"  ]]; then
     -e "s/{{DBUSERNAME}}/$DBUSERNAME/g" \
     -e "s/{{DBPASSWORD}}/$DBPASSWORD/g" config.env.example > config.env
 
+    DIR=`pwd`
+
+    ln -s "${DIR}/sslcert/key.pem" "${DIR}/sslcert/live/server.key"
+    ln -s "${DIR}/sslcert/certificate.pem" "${DIR}/sslcert/live/server.crt"
 
     node app.js
 fi
-
-
-
