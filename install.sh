@@ -20,20 +20,6 @@ fi
 
 npm install
 
-mkdir sslcert
-
-cd sslcert ||  exit 1
-
-mkdir live
-
-# this is going to create a ssl certificate to be used in the testing it is a self signed certificate
-openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out certificate.pem
-
-DIR=`pwd`
-
-ln -s "${DIR}/key.pem" "${DIR}/live/server.key"
-ln -s "${DIR}/certificate.pem" "${DIR}/live/server.crt"
-
 
 echo "if you are running this on the server that has already had the database created exit here."
 

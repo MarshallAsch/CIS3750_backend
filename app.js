@@ -4,17 +4,11 @@ var favicon = require("serve-favicon");
 var logger = require("morgan");
 var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
+var http = require("http");
 
-var fs = require('fs');
-var https = require("https");
 
 var index = require(__dirname + "/routes/index");
 var users = require(__dirname + "/routes/users");
-
-
-var privateKey  = fs.readFileSync(__dirname + '/sslcert/live/server.key', 'utf8');
-var certificate = fs.readFileSync(__dirname + '/sslcert/live/server.crt', 'utf8');
-var credentials = {key: privateKey, cert: certificate};
 
 var app = express();
 
@@ -25,7 +19,6 @@ var dbHost = process.env.DBHOST || "localhost";
 var dbUser = process.env.DBUSERNAME || "cis3750_node";
 var dbPass = process.env.DBPASSWORD || "team31";
 var dbName = process.env.DBNAME || "cis3750";
-
 
 
 
@@ -56,8 +49,6 @@ app.use(function(req, res, next){
 });
 
 
-
-
 app.use("/", index);
 app.use("/v1/users", users);
 
@@ -83,6 +74,9 @@ module.exports = app;
 
 
 
-https.createServer(credentials, app).listen(port);
+var server = http.createServer(app);
 
-console.log("Magic happens on port " + port);
+server.listen(port, 'localhost');
+server.on('listening', function() {
+    console.log('Express server started on port %s at %s', server.address().port, server.address().address);
+});
