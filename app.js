@@ -5,7 +5,7 @@ var logger = require("morgan");
 var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
 var http = require("http");
-
+var admin = require("firebase-admin");
 
 var index = require(__dirname + "/routes/index");
 var users = require(__dirname + "/routes/users");
@@ -19,12 +19,18 @@ var dbHost = process.env.DBHOST || "localhost";
 var dbUser = process.env.DBUSERNAME || "cis3750_node";
 var dbPass = process.env.DBPASSWORD || "team31";
 var dbName = process.env.DBNAME || "cis3750";
+var serviceAccount = process.env.FIREACC || "cis3750team31-firebase-adminsdk-sm0bf-189b38796f.json";
+var dbFire = process.env.FIREDB || "https://cis3750team31.firebaseio.com";
 
-
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: dbFire
+});
 
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "jade");
+app.set("admin", admin);
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, "public", "favicon.ico")));
@@ -33,7 +39,6 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
-
 
 var mysql = require("mysql");
 //Database connection
@@ -71,8 +76,6 @@ app.use(function(err, req, res, next) {
 });
 
 module.exports = app;
-
-
 
 var server = http.createServer(app);
 
