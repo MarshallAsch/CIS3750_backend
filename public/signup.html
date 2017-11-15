@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Sample FirebaseUI App</title>
+    <script src="https://www.gstatic.com/firebasejs/4.6.2/firebase.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script> 
+ </head>
+  <body>
+  <div style="position: absolute; width: 300px;height: 200px;top: 50%;left: 50%;margin: -100px 0 0 -150px;">
+  <input id="txtEmail" class="form-control" type="email" placeholder="Email" style="margin-bottom:5px;">
+  <input id="txtPassword" class="form-control" type="password" placeholder="Password" style="margin-bottom:5px;">
+  <button id="btnLogin" class="btn btn-primary">
+  Log In
+  </button>
+  <button id="btnSignUp" class="btn btn-default">
+  Sign Up
+  </button>
+
+  <button id="btnLogout" class="btn btn btn-action hide">
+  Log Out
+  </button>
+  </div<
+  </body>
+    <script>
+    // Initialize Firebase
+    var config = {
+      apiKey: "AIzaSyDxq5Y5upHSpA30JdcMvLKHwXIzpPGGiqU",
+      authDomain: "cis3750team31.firebaseapp.com",
+      databaseURL: "https://cis3750team31.firebaseio.com",
+      projectId: "cis3750team31",
+      storageBucket: "cis3750team31.appspot.com",
+      messagingSenderId: "823170329394"
+    };
+    firebase.initializeApp(config);
+    const txtEmail = document.getElementById("txtEmail");
+    const txtPassword = document.getElementById("txtPassword");
+    const btnLogin = document.getElementById("btnLogin");
+    const btnSignUp = document.getElementById("btnSignUp");
+    const btnLogout = document.getElementById("btnLogout");
+
+    // Login Event
+    btnLogin.addEventListener('click', e=> {
+      const email = txtEmail.value;
+      const pass = txtPassword.value;
+      const auth = firebase.auth();
+      const promise = auth.signInWithEmailAndPassword(email,pass);
+      promise.catch(e=>alert(e.message));
+    });
+
+    // Signup Event
+    btnSignUp.addEventListener('click', e=> {
+      const email = txtEmail.value;
+      const pass = txtPassword.value;
+      const auth = firebase.auth();
+      auth.createUserWithEmailAndPassword(email,pass).then(function() {
+        auth.currentUser.getIdToken(true).then(function(idToken) {
+          console.log(idToken);
+          $.post("/register", {"idtoken":idToken}, function(result) {
+            console.log(result);
+          });
+        }).catch( e => console.log(e.message) );
+      }).catch( e => console.log(e.message) );
+    });
+
+    btnLogout.addEventListener('click', e=> {
+      firebase.auth().signOut();
+    });
+
+    firebase.auth().onAuthStateChanged(firebaseUser => {
+      if( firebaseUser ) {
+        console.log(firebaseUser);
+        btnLogout.classList.remove('hide');
+      } else {
+        console.log("not logged in");
+        btnLogout.classList.add('hide');
+      }
+    });
+   </script>
+</html>
