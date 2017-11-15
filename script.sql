@@ -13,12 +13,12 @@ USE `{{DATABASE}}`;
 # The rest of the commands are to create the tables they does not yet exist
 
 CREATE TABLE IF NOT EXISTS `users` (
-	`ID` int NOT NULL AUTO_INCREMENT UNIQUE,
-	`enabled` bool NOT NULL,
-	`supportWorker` bool NOT NULL,
-	`admin` bool NOT NULL,
+	`ID` varchar(37) NOT NULL UNIQUE,
+	`enabled` bool DEFAULT FALSE,
+	`supportWorker` bool DEFAULT FALSE,
+	`admin` bool DEFAULT FALSE,
 	`birthday` DATE NOT NULL,
-	`createTime` DATETIME NOT NULL,
+	`createTime` DATETIME DEFAULT NOW(),
 	`firstname` varchar(60) NOT NULL,
 	`lastname` varchar(60) NOT NULL,
 	`displayName` varchar(120) NOT NULL,
@@ -33,8 +33,8 @@ CREATE TABLE IF NOT EXISTS `users` (
 ) ENGINE=INNODB;
 
 CREATE TABLE IF NOT EXISTS `clientMappings` (
-	`client` int NOT NULL,
-	`supportWorker` int NOT NULL,
+	`client` varchar(37) NOT NULL,
+	`supportWorker` varchar(37) NOT NULL,
 	PRIMARY KEY (`client`,`supportWorker`),
 	CONSTRAINT `clientMappings_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`),
 	CONSTRAINT `clientMappings_fk1` FOREIGN KEY (`supportWorker`) REFERENCES `users`(`ID`)
@@ -49,14 +49,14 @@ CREATE TABLE IF NOT EXISTS `drug` (
 
 CREATE TABLE IF NOT EXISTS `schedule` (
 	`ID` int NOT NULL AUTO_INCREMENT,
-	`client` int NOT NULL,
+	`client` varchar(37) NOT NULL,
 	`drug` int NOT NULL,
-	`dose unit` int NOT NULL,
+	`doseUnit` int NOT NULL,
 	`dose` FLOAT NOT NULL,
 	`createdByStaff` bool NOT NULL,
 	`enabled` bool NOT NULL,
 	`vacationUntil` DATE,
-	`createDate` DATETIME NOT NULL,
+	`createDate` DATETIME NOT NULL DEFAULT NOW(),
 	`endDate` DATE NOT NULL,
 	PRIMARY KEY (`ID`),
 	CONSTRAINT `schedule_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`),
@@ -77,8 +77,8 @@ CREATE TABLE IF NOT EXISTS `dose` (
 
 CREATE TABLE IF NOT EXISTS `schedulePermissions` (
 	`scheduleID` int NOT NULL,
-	`userID` int NOT NULL,
-	`clientID` int NOT NULL,
+	`userID` varchar(37) NOT NULL,
+	`clientID` varchar(37) NOT NULL,
 	`userAccepted` bool NOT NULL DEFAULT  FALSE,
 	`mandatory` bool NOT NULL DEFAULT FALSE,
 	PRIMARY KEY (`scheduleID`,`userID`,`clientID`),
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS `mood` (
 ) ENGINE=INNODB;
 
 CREATE TABLE IF NOT EXISTS `moodEntries` (
-	`client` int NOT NULL,
+	`client` varchar(37) NOT NULL,
 	`time` DATETIME NOT NULL,
 	`comments` varchar(256),
 	`status` int NOT NULL,
@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS `moodEntries` (
 ) ENGINE=INNODB;
 
 CREATE TABLE IF NOT EXISTS `notifications` (
-	`clientID` int NOT NULL,
+	`clientID` varchar(37) NOT NULL,
 	`doseID` int NOT NULL,
 	`scheduleID` int NOT NULL,
 	`missed` bool NOT NULL DEFAULT FALSE,

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "body-parser": "^1.18.2",
+    "chai": "^4.1.2",
     "cookie-parser": "^1.4.3",
     "debug": "~2.6.9",
     "dotenv": "^4.0.0",
@@ -18,10 +19,16 @@
     "jade": "^1.11.0",
     "morgan": "^1.9.0",
     "mysql": "^2.15.0",
-    "serve-favicon": "^2.4.5"
+    "serve-favicon": "^2.4.5",
+    "supertest": "^3.0.0"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/MarshallAsch/CIS3750_backend"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^4.0.1",
+    "supertest": "^3.0.0"
   }
 }

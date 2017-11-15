@@ -4,17 +4,21 @@ var router = express.Router();
 
 /* GET users listing. */
 router.get("/", function(req, res, next) {
+ res.setHeader('Content-Type', 'application/json');
     res.locals.connection.query("SELECT * from users", function (error, results, fields) {
-        if (error) res.send(JSON.stringify({"status": 500, "error": error, "response": results}));
-        res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+        if (error) {
+            res.send({"status": 500, "error": error, "response": results});
+        }
+        res.send({"status": 200, "error": null, "response": results});
     });
 });
 
 
 /* GET users listing. */
-router.get("/:userID", function(req, res, next) {
+router.get("/:userID([0-9]+)", function(req, res, next) {
 
-var userID = req.params.userID;
+ res.setHeader('Content-Type', 'application/json');
+    var userID = req.params.userID;
     res.locals.connection.query("SELECT * from users where ID = ? ",userID, function (error, results, fields) {
         if (error)
         {
@@ -28,40 +32,46 @@ var userID = req.params.userID;
 
 /* GET users listing. */
 router.post("/", function(req, res, next) {
-//	res.send("POST request" + req.params.id + "--" + req.param('name'));
 
-var date = new Date();
+
+    res.setHeader('Content-Type', 'application/json');
+    var date = new Date();
+
+    var id = Math.random().toString(); //so something to get the firebase UID here from the token
+
+
     var data =
     {
-    firstname:req.param("fname"),
-    lastname:req.param("lname"),
-    birthday: req.param("bday"),
-    email:req.param("email"),
-    enabled: true,
-    createTime: date.getFullYear() + "-" + (date.getMonth() + 1 )+ "-" + date.getDate(),
-    displayName: req.param("displayName"),
-    phoneNumber: req.param("phoneNumber"),
-    recoveryQ1:req.param("recoveryQ1"),
-    recoveryA1:req.param("recoveryA1"),
-    recoveryQ2:req.param("recoveryQ2"),
-    recoveryA2:req.param("recoveryA2"),
+        ID: id,
+        firstname:req.param("first_name"),
+        lastname:req.param("last_name"),
+        birthday: req.param("birthday"),
+        email:req.param("email"),
+        enabled: true,
+        displayName: req.param("display_name"),
+        phoneNumber: req.param("phone_number"),
+        recoveryQ1:req.param("recovery_q1"),
+        recoveryA1:req.param("recovery_a1"),
+        recoveryQ2:req.param("recovery_q2"),
+        recoveryA2:req.param("recovery_a2"),
     };
 
     res.locals.connection.query("INSERT into users set ?", data, function (error, results, fields) {
         if (error)
         {
-            res.send(JSON.stringify({"status": 500, "error": error, "response": results}));
+            res.send({"status": 500, "error": error, "response": results});
         } else {
-            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+            res.send({"status": 200, "error": null, "response": results});
         }
     });
 });
 
 
-router.patch("/:userID", function(req, res, next) {
-//	res.send("POST request" + req.params.id + "--" + req.param('name'));
+router.patch("/:userID([0-9]+)", function(req, res, next) {
 
-var userID = req.params.userID
+ res.setHeader('Content-Type', 'application/json');
+
+    var userID = req.params.userID
     var data =
     {
     firstname:req.body.fname,
@@ -87,6 +97,22 @@ var userID = req.params.userID
     });
 });
 
+
+
+router.delete("/:userID([0-9]+)", function(req, res, next) {
+
+ res.setHeader('Content-Type', 'application/json');
+    var userID = req.params.userID
+
+    res.locals.connection.query("delete from users where ID = ?",[userID], function (error, results, fields) {
+        if (error)
+        {
+            res.send(JSON.stringify({"status": 500, "error": error, "response": results}));
+        } else {
+            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+        }
+    });
+});
 
 
 module.exports = router;
