@@ -67,8 +67,8 @@ router.get("/", function(req, res, next) {
     // add something here to check if the authenticated user has permisseions to get that users data
 
     var uid = res.uid;
-    var limit = res.query.limit || 20;
-    var offset = res.query.offset || 0;
+    var limit = req.query.limit || 20;
+    var offset = req.query.offset || 0;
 
     if (limit > 50) {
         limit = 50;
