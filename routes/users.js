@@ -105,7 +105,7 @@ router.get("/", function(req, res, next) {
     else {
 
         //can see your support workers, anyone who is observing you and anyone who you are observing
-        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where or ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, offset, limit], function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, offset, limit], function (error, results, fields) {
             if (error) {
                 res.status(500);
                 res.send({"status": 500, "error": {message: error.sqlMessage, errorCode: error}, "response": results});
