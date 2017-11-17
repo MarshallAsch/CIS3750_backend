@@ -57,6 +57,10 @@ if [[ "$prod" -eq "1"  ]]; then
     echo -n "Database password(): "
     read DBPASSWORD
 
+    echo -n "Firebase .json file(): "
+    read FIREBASEACC
+    echo -n "Firebase database URL(): "
+    read FIREBASEDB
 
     if [[ -z "$PORT" ]]; then
         PORT="3000"
@@ -79,11 +83,24 @@ if [[ "$prod" -eq "1"  ]]; then
         exit 1
     fi
 
+    if [[ -z "$FIREBASEACC" ]]; then
+        echo "Missing firebase account file, ending... "
+        FIREBASEACC="cis3750team31-firebase-adminsdk-sm0bf-189b38796f.json"
+    fi
+
+    if [[ -z "$FIREBASEDB" ]]; then
+        echo "Missing firebase database URL, ending... "
+
+        FIREBASEDB="https://cis3750team31.firebaseio.com"
+    fi
+
     sed -e "s/{{PORT}}/$PORT/g"  \
     -e "s/{{DBHOST}}/$DBHOST/g"  \
     -e "s/{{DBNAME}}/$DBNAME/g" \
     -e "s/{{DBUSERNAME}}/$DBUSERNAME/g" \
-    -e "s/{{DBPASSWORD}}/$DBPASSWORD/g" config.env.example > config.env
+    -e "s/{{DBPASSWORD}}/$DBPASSWORD/g" \
+    -e "s/{{FIREBASEACC}}/$FIREBASEACC/g"\
+    -e "s/{{FIREBASEDB}}/$FIREBASEDB/g" config.env.example > config.env
 fi
 
 
@@ -99,6 +116,11 @@ if [[ "$prod" -eq "0"  ]]; then
     read DBUSERNAME
     echo -n "Database password for testing(): "
     read DBPASSWORD
+
+    echo -n "Firebase .json file(): "
+    read FIREBASEACC
+    echo -n "Firebase database URL(): "
+    read FIREBASEDB
 
     if [[ -z "$PORT" ]]; then
         PORT="3001"
@@ -121,11 +143,25 @@ if [[ "$prod" -eq "0"  ]]; then
         exit 1
     fi
 
+    if [[ -z "$FIREBASEACC" ]]; then
+        echo "Missing firebase account file, ending... "
+        exit 1
+    fi
+
+    if [[ -z "$FIREBASEDB" ]]; then
+        echo "Missing firebase database URL, ending... "
+        exit 1
+    fi
+
+
+
     sed -e "s/{{PORT}}/$PORT/g"  \
     -e "s/{{DBHOST}}/$DBHOST/g"  \
     -e "s/{{DBNAME}}/$DBNAME/g" \
     -e "s/{{DBUSERNAME}}/$DBUSERNAME/g" \
-    -e "s/{{DBPASSWORD}}/$DBPASSWORD/g" config.env.example > config.env
+    -e "s/{{DBPASSWORD}}/$DBPASSWORD/g" \
+    -e "s/{{FIREBASEACC}}/$FIREBASEACC/g"\
+    -e "s/{{FIREBASEDB}}/$FIREBASEDB/g" config.env.example > config.env
 
     node app.js
 fi

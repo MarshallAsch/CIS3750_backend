@@ -40,6 +40,14 @@ CREATE TABLE IF NOT EXISTS `clientMappings` (
 	CONSTRAINT `clientMappings_fk1` FOREIGN KEY (`supportWorker`) REFERENCES `users`(`ID`)
 ) ENGINE=INNODB;
 
+CREATE TABLE IF NOT EXISTS `userPermissions` (
+	`client` varchar(37) NOT NULL,
+	`observer` varchar(37) NOT NULL,
+	PRIMARY KEY (`client`,`observer`),
+	CONSTRAINT `userPermissions_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`),
+	CONSTRAINT `userPermissions_fk1` FOREIGN KEY (`observer`) REFERENCES `users`(`ID`)
+) ENGINE=INNODB;
+
 CREATE TABLE IF NOT EXISTS `drug` (
 	`ID` int NOT NULL AUTO_INCREMENT UNIQUE,
 	`name` TEXT NOT NULL,

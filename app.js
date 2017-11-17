@@ -6,6 +6,8 @@ var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
 var http = require("http");
 var admin = require("firebase-admin");
+var mysql = require("mysql");
+
 
 var index = require(__dirname + "/routes/index");
 var users = require(__dirname + "/routes/users");
@@ -19,8 +21,8 @@ var dbHost = process.env.DBHOST || "localhost";
 var dbUser = process.env.DBUSERNAME || "cis3750_node";
 var dbPass = process.env.DBPASSWORD || "team31";
 var dbName = process.env.DBNAME || "cis3750";
-var serviceAccount = process.env.FIREACC || "cis3750team31-firebase-adminsdk-sm0bf-189b38796f.json";
-var dbFire = process.env.FIREDB || "https://cis3750team31.firebaseio.com";
+var serviceAccount = process.env.FIREBASEACC || "cis3750team31-firebase-adminsdk-sm0bf-189b38796f.json";
+var dbFire = process.env.FIREBASEDB || "https://cis3750team31.firebaseio.com";
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -40,7 +42,6 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-var mysql = require("mysql");
 //Database connection
 app.use(function(req, res, next){
 	res.locals.connection = mysql.createConnection({
@@ -72,7 +73,8 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render("error");
+  res.send({"status": err.status || 500, "error": {message:  err.message, code: err}, "response": null});
+
 });
 
 module.exports = app;
