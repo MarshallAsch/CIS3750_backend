@@ -64,10 +64,8 @@
                 <div class="form-group row">
                     <label for="birthDate" class="col-sm-3 control-label">Date of Birth <span class="required">*</span></label>
 
-                        <!--<input type="date" id="birthDate" class="form-control">-->
-
                             <div class="col-sm-3">
-                                <select class="form-control" name="month">
+                                <select class="form-control" id="month" name="month">
                                         <option value="January">January</option>
                                         <option value="February">February</option>
                                         <option value="March">March</option>
@@ -83,7 +81,7 @@
                                 </select> 
                             </div>
                             <div class="col-sm-3">
-                                <select class="form-control" name="day">
+                                <select class="form-control" id="day" name="day">
                                         <option value="1">1</option>
                                         <option value="2">2</option>
                                         <option value="3">3</option>
@@ -118,7 +116,7 @@
                                 </select> 
                             </div>
                             <div class="col-sm-3">
-                                <select class="form-control" name="day">
+                                <select class="form-control" id="year" name="year">
                                         <option value="2017">2017</option>
                                         <option value="2016">2016</option>
                                         <option value="2015">2015</option>
@@ -308,7 +306,7 @@
 
                  <button type="reset" value="Reset" class="btn">Reset</button>
 
-                <button type="button" value="Submit" class="btn btn-primary" onclick="window.location.href='./account-verification-message.html'">Submit</button>
+                <button type="button" value="Submit" id="submit" class="btn btn-primary">Submit</button>
 
 
             </form> <!-- /form -->
@@ -320,9 +318,21 @@
         </div> <!-- ./container -->
 
 
-        <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+        <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
-
+	<script>
+		$("#submit").click(function() {
+			var firstName =  $('#firstName').val();
+			var lastName = $('#last_name').val();
+			var email = $('#email').val();
+			var password = $('#password').val();
+			var month = $('#month').val();
+			var day = $('#day').val();
+			var year = $('#year').val();
+			var gender = "Gender";
+			$.post("/account", { "firstName": firstName, "lastName": lastName, "password": password, "email": email});
+		});
+	 </script>
 </body>
 </html>
