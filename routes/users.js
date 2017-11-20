@@ -2,7 +2,6 @@ var express = require("express");
 var router = express.Router();
 
 
-
 var validate = function (req, res, next){
 
 
@@ -29,7 +28,7 @@ var validate = function (req, res, next){
 
       req.uid = uid;
 
-      res.locals.connection.query("SELECT supportWorker, admin from users where ID = ? ",uid, function (error, results, fields) {
+      res.locals.connection.query("SELECT userRole from users where ID = ? ",uid, function (error, results, fields) {
           if (error) {
 
               var err = new Error(error.sqlMessage);
@@ -37,10 +36,32 @@ var validate = function (req, res, next){
               err.code = error.error;
               err.error = error;
               next(err);
-          }else {
+          }else if (results.length === 0) {
+              var err = new Error("User does not exist, sign up for an account");
+              err.status = 401;
+              err.code = "auth/user-not-exists";
+              next(err);
 
-              req.isAdmin = results.admin || false;
-              req.isSupportWorker = results.supportWorker || false;
+          } else {
+
+
+              if ((results[0].role & 0x10)  !== 0) {
+                  req.supportWorker  = true;
+              }
+              else {
+                  req.supportWorker = false;
+              }
+
+
+              if ((results[0].role & 0x100)  !== 0) {
+                  req.isAdmin  = true;
+              }
+              else {
+                  req.isAdmin = false;
+              }
+
+              console.log("done validation");
+
               next();
 
           }
@@ -58,13 +79,7 @@ var validate = function (req, res, next){
     });
 };
 
-
-router.use(validate);
-
-
-
-
-router.get("/", function(req, res, next) {
+router.get("/", validate, function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
 
@@ -84,7 +99,7 @@ router.get("/", function(req, res, next) {
     }
 
     if (res.isAdmin) {
-        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users limit ?, ?", [offset, limit], function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users limit ?, ?", [offset, limit], function (error, results, fields) {
             if (error) {
 
                 var err = new Error(error.sqlMessage);
@@ -115,7 +130,7 @@ router.get("/", function(req, res, next) {
     else if (res.isSupportWorker) {
 
         //can see support workers, admins and clients that they are responcible for
-        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where admin = true or supportWorker = true or ID in (select client from clientMappings where supportWorker = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, offset, limit], function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where admin = true or supportWorker = true or ID in (select client from clientMappings where supportWorker = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, offset, limit], function (error, results, fields) {
 
             if (error) {
                 var err = new Error(error.sqlMessage);
@@ -147,7 +162,7 @@ router.get("/", function(req, res, next) {
     else {
 
         //can see your support workers, anyone who is observing you and anyone who you are observing
-        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? or ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, uid, offset, limit], function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? or ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, uid, offset, limit], function (error, results, fields) {
             if (error) {
                 var err = new Error(error.sqlMessage);
                 err.status = 500;
@@ -178,46 +193,65 @@ router.get("/", function(req, res, next) {
     }
 });
 
-// this will be deprecated this is being moved into the account signup endpoint
 router.post("/", function(req, res, next) {
 
-    var uid = req.uid;
+    var admin = req.app.get("admin");
+
 
     res.setHeader('Content-Type', 'application/json');
 
-    var data =
-    {
-        ID:             uid,
-        firstname:      req.body.first_name,
-        lastname:       req.body.last_name,
-        birthday:       req.body.birthday,
-        email:          req.body.email,
-        enabled:        true,
-        displayName:    req.body.display_name,
-        phoneNumber:    req.body.phone_number,
-        recoveryQ1:     req.body.recovery_q1,
-        recoveryA1:     req.body.recovery_a1,
-        recoveryQ2:     req.body.recovery_q2,
-        recoveryA2:     req.body.recovery_a2
-    };
 
-    // add the user to the database
-    res.locals.connection.query("INSERT into users set ?", data, function (error, results, fields) {
-        if (error) {
-            var err = new Error(error.sqlMessage);
-            err.status = 500;
-            err.code = error.error;
-            err.error = error;
-            next(err);
-        } else {
-            res.status(201);
-            res.send({"status": 200, "error": null, "response": results});
-        }
+    admin.auth().createUser({
+        email:        req.body.email,
+        password:     req.body.password,
+        firstName:    req.body.first_name,
+        lastName:     req.body.last_name
+    })
+    .then(function(userRecord) {
+        // See the UserRecord reference doc for the contents of userRecord.
+        console.log("Successfully created new user:", userRecord.uid);
+
+        var data =
+        {
+            ID:             userRecord.uid,
+            firstname:      req.body.first_name,
+            lastname:       req.body.last_name,
+            birthday:       req.body.birthday,
+            email:          req.body.email,
+            enabled:        true,
+            displayName:    req.body.display_name || (req.body.first_name + " " + req.body.last_name),
+            phoneNumber:    req.body.phone_number,
+            recoveryQ1:     req.body.recovery_q1,
+            recoveryA1:     req.body.recovery_a1,
+            recoveryQ2:     req.body.recovery_q2,
+            recoveryA2:     req.body.recovery_a2
+        };
+
+        // add the user to the database
+        res.locals.connection.query("INSERT into users set ?", data, function (error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            } else {
+                res.status(201);
+                res.send({"status": 200, "error": null, "response": results});
+            }
+        });
+    })
+    .catch(function(error) {
+        console.log("Error creating new user:", error);
+        var err = new Error(error.message);
+        err.status = 400;
+        err.code = error.code;
+        err.error = error;
+        next(err);
     });
-
 });
 
-router.patch("/", function(req, res, next) {
+router.patch("/", validate, function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
 
@@ -295,15 +329,14 @@ router.patch("/", function(req, res, next) {
     });
 });
 
-
-router.get("/:userID", function(req, res, next) {
+router.get("/:userID", validate, function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
     var userID = req.params.userID;
     var uid = req.uid;
 
     if (uid === userID) {
-        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email,recoveryQ1,recoveryA1,recoveryQ2,recoveryA2 from users where ID = ? ",userID, function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email,recoveryQ1,recoveryA1,recoveryQ2,recoveryA2 from users where ID = ? ",userID, function (error, results, fields) {
             if (error) {
                 var err = new Error(error.sqlMessage);
                 err.status = 500;
@@ -316,7 +349,7 @@ router.get("/:userID", function(req, res, next) {
         });
     }
     else if (res.isAdmin){
-        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? ",userID, function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? ",userID, function (error, results, fields) {
             if (error) {
                 var err = new Error(error.sqlMessage);
                 err.status = 500;
@@ -330,7 +363,7 @@ router.get("/:userID", function(req, res, next) {
     }
     else if (res.isSupportWorker) {
 
-        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? and (admin = true or supportWorker = true or ID in (select client from clientMappings where supportWorker = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?))", [userID, uid, uid, uid], function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? and (admin = true or supportWorker = true or ID in (select client from clientMappings where supportWorker = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?))", [userID, uid, uid, uid], function (error, results, fields) {
             if (error) {
                 var err = new Error(error.sqlMessage);
                 err.status = 500;
@@ -344,7 +377,7 @@ router.get("/:userID", function(req, res, next) {
     }
     else {
 
-        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? and ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?)", [userID, uid, uid, uid], function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? and ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?)", [userID, uid, uid, uid], function (error, results, fields) {
             if (error) {
                 var err = new Error(error.sqlMessage);
                 err.status = 500;
@@ -359,8 +392,7 @@ router.get("/:userID", function(req, res, next) {
 
 });
 
-
-router.delete("/:userID", function(req, res, next) {
+router.delete("/:userID", validate, function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
 
@@ -381,8 +413,21 @@ router.delete("/:userID", function(req, res, next) {
                 err.error = error;
                 next(err);
             } else {
-                res.status(200);
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+                admin.auth().deleteUser(userID)
+                .then(function() {
+                    console.log("Successfully deleted user");
+                    res.status(200);
+                    res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+                })
+                .catch(function(error) {
+                    console.log("Error deleting user:", error);
+
+                    var err = new Error(error.message);
+                    err.status = 401;
+                    err.code = error.code;
+                    err.error = error;
+                    next(err);
+                });
             }
         });
     }
@@ -398,8 +443,21 @@ router.delete("/:userID", function(req, res, next) {
                 err.error = error;
                 next(err);
             } else {
-                res.status(200);
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+                admin.auth().deleteUser(userID)
+                .then(function() {
+                    console.log("Successfully deleted user");
+                    res.status(200);
+                    res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+                })
+                .catch(function(error) {
+                    console.log("Error deleting user:", error);
+
+                    var err = new Error(error.message);
+                    err.status = 401;
+                    err.code = error.code;
+                    err.error = error;
+                    next(err);
+                });
             }
         });
     }

@@ -15,8 +15,7 @@ USE `{{DATABASE}}`;
 CREATE TABLE IF NOT EXISTS `users` (
 	`ID` varchar(37) NOT NULL UNIQUE,
 	`enabled` bool DEFAULT FALSE,
-	`supportWorker` bool DEFAULT FALSE,
-	`admin` bool DEFAULT FALSE,
+	`userRole` INT DEFAULT 0,
 	`birthday` DATE NOT NULL,
 	`createTime` DATETIME DEFAULT NOW(),
 	`firstname` varchar(60) NOT NULL,
