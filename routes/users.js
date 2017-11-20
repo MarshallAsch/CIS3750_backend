@@ -3,14 +3,10 @@ var router = express.Router();
 
 
 var validate = function (req, res, next){
-
-
-    //var tokenID = req.body["tokenID"];
     var admin = req.app.get("admin");
     var tokenID = req.get("X-API-KEY");
 
     res.setHeader('Content-Type', 'application/json');
-
 
     if (tokenID === undefined) {
 
@@ -24,7 +20,6 @@ var validate = function (req, res, next){
     admin.auth().verifyIdToken(tokenID) .then(function(decodedToken) {
       var uid = decodedToken.uid;
       console.log(decodedToken);
-
 
       req.uid = uid;
 
@@ -43,8 +38,6 @@ var validate = function (req, res, next){
               next(err);
 
           } else {
-
-
               if ((results[0].role & 0x10)  !== 0) {
                   req.supportWorker  = true;
               }
@@ -59,8 +52,6 @@ var validate = function (req, res, next){
               else {
                   req.isAdmin = false;
               }
-
-              console.log("done validation");
 
               next();
 
@@ -122,9 +113,6 @@ router.get("/", validate, function(req, res, next) {
                 }
                 res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
             });
-
-
-            //res.send({"status": 200, "error": null, "response": results});
         });
     }
     else if (res.isSupportWorker) {
@@ -140,7 +128,6 @@ router.get("/", validate, function(req, res, next) {
                 next(err);
             }
 
-
             var users = results;
 
             res.locals.connection.query("SELECT count(*) AS total from users where admin = true or supportWorker = true or ID in (select client from clientMappings where supportWorker = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, offset, limit], function (error, results, fields) {
@@ -155,8 +142,6 @@ router.get("/", validate, function(req, res, next) {
                 }
                 res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
             });
-
-            //res.send({"status": 200, "error": null, "response": results});
         });
     }
     else {
@@ -172,7 +157,6 @@ router.get("/", validate, function(req, res, next) {
             }
 
             var users = results;
-            console.log(fields);
 
             res.locals.connection.query("SELECT count(*) AS total from users where ID = ? or ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, uid, offset, limit], function (error, results, fields) {
 
@@ -186,9 +170,6 @@ router.get("/", validate, function(req, res, next) {
                 }
                 res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
             });
-
-
-            //res.send({"status": 200, "error": null, "response": results});
         });
     }
 });
@@ -396,10 +377,9 @@ router.delete("/:userID", validate, function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
 
+    var admin = req.app.get("admin");
     var userID = req.params.userID
-
     var uid = req.uid;
-
 
     if (userID === uid) {
 
