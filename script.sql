@@ -58,17 +58,17 @@ CREATE TABLE IF NOT EXISTS `drug` (
 CREATE TABLE IF NOT EXISTS `schedule` (
 	`ID` int NOT NULL AUTO_INCREMENT,
 	`client` varchar(37) NOT NULL,
-	`drug` int NOT NULL,
-	`doseUnit` int NOT NULL,
+	`drug` varchar(256) NOT NULL,
+	`doseUnit` varchar(60) NOT NULL,
 	`dose` FLOAT NOT NULL,
 	`createdByStaff` bool NOT NULL,
 	`enabled` bool NOT NULL,
 	`vacationUntil` DATE,
 	`createDate` DATETIME NOT NULL DEFAULT NOW(),
+	`startDate` DATE NOT NULL,
 	`endDate` DATE NOT NULL,
 	PRIMARY KEY (`ID`),
-	CONSTRAINT `schedule_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`),
-	CONSTRAINT `schedule_fk1` FOREIGN KEY (`drug`) REFERENCES `drug`(`ID`)
+	CONSTRAINT `schedule_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`)
 ) ENGINE=INNODB;
 
 

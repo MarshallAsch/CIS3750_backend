@@ -8,17 +8,17 @@ var validate = function (req, res, next){
 
     //var tokenID = req.body["tokenID"];
     var admin = req.app.get("admin");
-
-
     var tokenID = req.get("X-API-KEY");
-
 
     res.setHeader('Content-Type', 'application/json');
 
 
     if (tokenID === undefined) {
-        res.status(401);
-        res.send({"status": 401, "error": {message: "You need to authenticate yourself with the X-API-KEY header", code:"auth/argument-error"}, "response": null});
+
+        var err = new Error("You need to authenticate yourself with the X-API-KEY header");
+        err.status = 401;
+        err.code = "auth/argument-missing";
+        next(err);
     }
 
 
@@ -31,8 +31,12 @@ var validate = function (req, res, next){
 
       res.locals.connection.query("SELECT supportWorker, admin from users where ID = ? ",uid, function (error, results, fields) {
           if (error) {
-              res.status(500);
-              res.send({"status": 500, "error": {message: error.sqlMessage, errorCode: error}, "response": results});
+
+              var err = new Error(error.sqlMessage);
+              err.status = 500;
+              err.code = error.error;
+              err.error = error;
+              next(err);
           }else {
 
               req.isAdmin = results.admin || false;
@@ -42,13 +46,14 @@ var validate = function (req, res, next){
           }
       });
     }).catch(function(error) {
-      // Handle error
-
       //this captures the firebase error
       console.log("error: " + error);
 
-      res.status(401);
-      res.send({"status": 401, "error": error, "response": null});
+      var err = new Error(error.message);
+      err.status = 401;
+      err.code = error.code;
+      err.error = error;
+      next(err);
 
     });
 };
@@ -63,10 +68,7 @@ router.get("/", function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
 
-
-    // add something here to check if the authenticated user has permisseions to get that users data
-
-    var uid = res.uid;
+    var uid = req.uid;
     var limit = parseInt(req.query.limit, 10) || 20;
     var offset = parseInt(req.query.offset, 10) || 0;
 
@@ -81,59 +83,102 @@ router.get("/", function(req, res, next) {
         offset = 0;
     }
 
-
     if (res.isAdmin) {
         res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users limit ?, ?", [offset, limit], function (error, results, fields) {
             if (error) {
-                res.status(500);
-                res.send({"status": 500, "error": {message: error.sqlMessage, errorCode: error}, "response": results});
+
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
             }
-            res.send({"status": 200, "error": null, "response": results});
+
+            var users = results;
+
+            res.locals.connection.query("SELECT count(*) AS total from users", function (error, results, fields) {
+                if (error) {
+
+                    var err = new Error(error.sqlMessage);
+                    err.status = 500;
+                    err.code = error.error;
+                    err.error = error;
+                    next(err);
+                }
+                res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+            });
+
+
+            //res.send({"status": 200, "error": null, "response": results});
         });
     }
     else if (res.isSupportWorker) {
 
         //can see support workers, admins and clients that they are responcible for
-        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where admin=true or supportWorker=true or ID in (select client from clientMappings where supportWorker = ? ) limit ?, ?", [uid, offset, limit], function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where admin = true or supportWorker = true or ID in (select client from clientMappings where supportWorker = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, offset, limit], function (error, results, fields) {
+
             if (error) {
-                res.status(500);
-                res.send({"status": 500, "error": {message: error.sqlMessage, errorCode: error}, "response": results});
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
             }
-            res.send({"status": 200, "error": null, "response": results});
+
+
+            var users = results;
+
+            res.locals.connection.query("SELECT count(*) AS total from users where admin = true or supportWorker = true or ID in (select client from clientMappings where supportWorker = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, offset, limit], function (error, results, fields) {
+
+                if (error) {
+
+                    var err = new Error(error.sqlMessage);
+                    err.status = 500;
+                    err.code = error.error;
+                    err.error = error;
+                    next(err);
+                }
+                res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+            });
+
+            //res.send({"status": 200, "error": null, "response": results});
         });
     }
     else {
 
         //can see your support workers, anyone who is observing you and anyone who you are observing
-        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, offset, limit], function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? or ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, uid, offset, limit], function (error, results, fields) {
             if (error) {
-                res.status(500);
-                res.send({"status": 500, "error": {message: error.sqlMessage, errorCode: error}, "response": results});
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
             }
-            res.send({"status": 200, "error": null, "response": results});
+
+            var users = results;
+            console.log(fields);
+
+            res.locals.connection.query("SELECT count(*) AS total from users where ID = ? or ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, uid, offset, limit], function (error, results, fields) {
+
+                if (error) {
+
+                    var err = new Error(error.sqlMessage);
+                    err.status = 500;
+                    err.code = error.error;
+                    err.error = error;
+                    next(err);
+                }
+                res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+            });
+
+
+            //res.send({"status": 200, "error": null, "response": results});
         });
     }
 });
 
-
-router.get("/:userID", function(req, res, next) {
-
- res.setHeader('Content-Type', 'application/json');
-    var userID = req.params.userID;
-
-// add something here to check if the authenticated user has permisseions to get that users data
-
-    res.locals.connection.query("SELECT * from users where ID = ? ",userID, function (error, results, fields) {
-        if (error) {
-            res.send(JSON.stringify({"status": 500, "error": error, "response": results}));
-        }else {
-            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
-        }
-    });
-
-});
-
-
+// this will be deprecated this is being moved into the account signup endpoint
 router.post("/", function(req, res, next) {
 
     var uid = req.uid;
@@ -142,25 +187,28 @@ router.post("/", function(req, res, next) {
 
     var data =
     {
-        ID: uid,
-        firstname:      req.body["first_name"],
-        lastname:       req.body["last_name"],
-        birthday:       req.body["birthday"],
-        email:          req.body["email"],
+        ID:             uid,
+        firstname:      req.body.first_name,
+        lastname:       req.body.last_name,
+        birthday:       req.body.birthday,
+        email:          req.body.email,
         enabled:        true,
-        displayName:    req.body["display_name"],
-        phoneNumber:    req.body["phone_number"],
-        recoveryQ1:     req.body["recovery_q1"],
-        recoveryA1:     req.body["recovery_a1"],
-        recoveryQ2:     req.body["recovery_q2"],
-        recoveryA2:     req.body["recovery_a2"]
+        displayName:    req.body.display_name,
+        phoneNumber:    req.body.phone_number,
+        recoveryQ1:     req.body.recovery_q1,
+        recoveryA1:     req.body.recovery_a1,
+        recoveryQ2:     req.body.recovery_q2,
+        recoveryA2:     req.body.recovery_a2
     };
 
     // add the user to the database
     res.locals.connection.query("INSERT into users set ?", data, function (error, results, fields) {
         if (error) {
-            res.status(500);
-            res.send({"status": 500, "error": {message: error.sqlMessage, errorCode: error}, "response": results});
+            var err = new Error(error.sqlMessage);
+            err.status = 500;
+            err.code = error.error;
+            err.error = error;
+            next(err);
         } else {
             res.status(201);
             res.send({"status": 200, "error": null, "response": results});
@@ -169,130 +217,199 @@ router.post("/", function(req, res, next) {
 
 });
 
-
-router.patch("/:userID([0-9]+)", function(req, res, next) {
+router.patch("/", function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
 
-    var userID = req.params.userID
+    var uid = req.uid;
 
-    var data =
+
+
+
+
+    // add input validaton here
+
+
+    var data = {};
+    if (req.body.first_name !== undefined) {
+        data.firstname = req.body.first_name;
+    }
+
+    if (req.body.last_name !== undefined) {
+        data.lastname = req.body.last_name;
+    }
+
+    if (req.body.birthday !== undefined) {
+        data.birthday = req.body.birthday;
+    }
+
+    if (req.body.display_name !== undefined) {
+        data.displayName = req.body.display_name;
+    }
+
+    if (req.body.phone_number !== undefined) {
+        data.phoneNumber = req.body.phone_number;
+    }
+
+    if (req.body.recovery_q1 !== undefined) {
+        data.recoveryQ1 = req.body.recovery_q1;
+    }
+
+    if (req.body.recovery_a1 !== undefined) {
+        data.recoveryA1 = req.body.recovery_a1;
+    }
+
+    if (req.body.recovery_q2 !== undefined) {
+        data.recoveryQ2 = req.body.recovery_q2;
+    }
+
+    if (req.body.recovery_a1 !== undefined) {
+        data.recoveryA2 = req.body.recovery_a1;
+    }
+
+    if (req.body.email !== undefined) {
+        data.email = req.body.email;
+    }
+
+    //make sure that at least 1 field is being updated
+    if (Object.keys(data).length === 0)
     {
-        firstname:req.body.fname,
-        lastname:req.body.lname,
-        birthday: req.body.bday,
-        //email:req.body.email,
-        enabled: true,
-        displayName: req.body.displayName,
-        phoneNumber: req.body.phoneNumber,
-        recoveryQ1:req.body.recoveryQ1,
-        recoveryA1:req.body.recoveryA1,
-        recoveryQ2:req.body.recoveryQ2,
-        recoveryA2:req.body.recoveryA2,
-    };
+        var err = new Error("No values are given to update.");
+        err.status = 400;
+        err.code = "bad-req";
+        err.error = req.body;
+        next(err);
+    }
 
-    res.locals.connection.query("UPDATE users set ? where ID = ?",[ data,userID], function (error, results, fields) {
-        if (error)
-        {
-            res.send(JSON.stringify({"status": 500, "error": error, "response": results}));
+    res.locals.connection.query("UPDATE users set ? where ID = ?",[data, uid], function (error, results, fields) {
+        if (error) {
+            var err = new Error(error.sqlMessage);
+            err.status = 500;
+            err.code = error.error;
+            err.error = error;
+            next(err);
         } else {
+            res.status(200);
             res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
         }
     });
 });
 
 
-
-router.delete("/:userID", function(req, res, next) {
-
-    res.setHeader('Content-Type', 'application/json');
-
-
-    var tokenID = req.body["tokenID"];
-    var admin = req.app.get("admin");
-
-    var userID = req.params.userID
+router.get("/:userID", function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
+    var userID = req.params.userID;
+    var uid = req.uid;
 
+    if (uid === userID) {
+        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email,recoveryQ1,recoveryA1,recoveryQ2,recoveryA2 from users where ID = ? ",userID, function (error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            }else {
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+            }
+        });
+    }
+    else if (res.isAdmin){
+        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? ",userID, function (error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            }else {
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+            }
+        });
+    }
+    else if (res.isSupportWorker) {
 
-
-    admin.auth().verifyIdToken(tokenID).then(function(decodedToken) {
-    var uid = decodedToken.uid;
-
-
-    //make sure that the ID of the user being deleted matched that of the user
-    //doing the deleteing or that the deleter is an admin
-
-    if (userID === uid) {
-
-        //delete their own account
-        res.locals.connection.query("delete from users where ID = ?",[userID], function (error, results, fields) {
-            if (error)
-            {
-                res.send(JSON.stringify({"status": 500, "error": error, "response": results}));
-            } else {
+        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? and (admin = true or supportWorker = true or ID in (select client from clientMappings where supportWorker = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?))", [userID, uid, uid, uid], function (error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            }else {
                 res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
             }
         });
     }
     else {
-        //check if it is an admin
 
-        res.locals.connection.query("select count(*) AS 'count' from users where ID = ? AND admin='true'",[tokenID], function (error, results, fields) {
-            if (error)
-            {
-                res.send(JSON.stringify({"status": 500, "error": error, "response": results}));
-            } else {
-
-
-                if (results.count == 1) {
-                    console.log("Admin is doing the deleteing");
-
-                    res.locals.connection.query("delete from users where ID = ?",[userID], function (error, results, fields) {
-                        if (error)
-                        {
-                            res.send(JSON.stringify({"status": 500, "error": error, "response": results}));
-                        } else {
-
-                            admin.auth().deleteUser(userID)
-                              .then(function() {
-                                console.log("Successfully deleted user");
-                                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
-                              })
-                              .catch(function(error) {
-                                console.log("Error deleting user:", error);
-                              });
-
-
-                        }
-                    });
-
-                }
-                else {
-                    //does not have permission to delete this user
-                    res.status(403)
-                    res.send(JSON.stringify({"status": 403, "error": {message: "You do not have permission to delete this user", errorCode: null}}));
-                }
-
+        res.locals.connection.query("SELECT ID,supportWorker,admin,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID = ? and ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?)", [userID, uid, uid, uid], function (error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            }else {
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
             }
         });
-
-
     }
 
+});
 
 
- }).catch(function(error) {
-   // Handle error
+router.delete("/:userID", function(req, res, next) {
 
-   //this captures the firebase error
-   console.log("error: " + error);
+    res.setHeader('Content-Type', 'application/json');
 
-   res.status(400);
-   res.send({"status": 400, "error": error, "response": null});
+    var userID = req.params.userID
 
- });
+    var uid = req.uid;
+
+
+    if (userID === uid) {
+
+        //delete their own account
+        //deal with chained deletion
+        res.locals.connection.query("delete from users where ID = ?",[userID], function (error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            } else {
+                res.status(200);
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+            }
+        });
+    }
+    else if (req.isAdmin) {
+
+        //admin can delete any account
+        //deal with chained deletion
+        res.locals.connection.query("delete from users where ID = ?",[userID], function (error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            } else {
+                res.status(200);
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+            }
+        });
+    }
+    else {
+
+        var err = new Error("You do not have permission to delete this user");
+        err.status = 403;
+        err.code = "permission-denied";
+        next(err);
+    }
 
 });
 
