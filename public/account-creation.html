@@ -330,9 +330,11 @@
 			var month = $('#month').val();
 			var day = $('#day').val();
 			var year = $('#year').val();
+			var birthday = (year + "-" + month + "-" + day);
+			var phoneNumber = $('#phoneNumber').val();
 			var gender = $('input[name=gender]:checked').val();
 			var with_CLC = $('input[name=partOfCLC]:checked').val();
-			$.post("/v1/users", { "firstName": firstName, "lastName": lastName, "password": password, "email": email, "gender": gender, "partOfCLC": with_CLC});
+			$.post("/v1/users", { "first_name": firstName, "last_name": lastName, "birthday": birthday, "email": email, "password": password, "display_name": "jdarnit", "phone_number": phoneNumber, "recovery_q1": "Why do the kids hate me?", "recovery_a1": "PB&J", "recovery_q2": "What was I doing with PB&J?", "recovery_a2": "Exact challenge." });
 		});
 	 </script>
 </body>
