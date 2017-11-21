@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS `users` (
 	`displayName` varchar(120) NOT NULL,
 	`phoneNumber` varchar(17) NOT NULL,
 	`email` varchar(256) NOT NULL UNIQUE,
+	`gender` INT DEFAULT 0,
+	`partOfCLC` bool default FALSE,
 	`recoveryQ1` TEXT NOT NULL,
 	`recoveryA1` TEXT NOT NULL,
 	`recoveryQ2` TEXT NOT NULL,

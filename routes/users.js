@@ -2,11 +2,30 @@ var express = require("express");
 var router = express.Router();
 
 
+/**
+ * This middleware functon will validate the users tokenID that was sent in the
+ * request header X-API-KEY field. It will validate with google that the user is
+ * valid. It will also check the users role and will set a supportWorker and
+ * isAdmin flag accordingly.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 var validate = function (req, res, next){
     var admin = req.app.get("admin");
     var tokenID = req.get("X-API-KEY");
 
     res.setHeader('Content-Type', 'application/json');
+
+    if (req.get('content-type') !== 'application/json') {
+        var err = new Error("Invalid content type. found \"" + req.get('content-type') + "\" excpected application/json.");
+        err.status = 400;
+        err.code = "invalid-content-type";
+        next(err);
+        return;
+    }
 
     if (tokenID === undefined) {
 
@@ -14,15 +33,17 @@ var validate = function (req, res, next){
         err.status = 401;
         err.code = "auth/argument-missing";
         next(err);
+        return;
     }
 
-
+    // verify the users token with firebase authentication
     admin.auth().verifyIdToken(tokenID) .then(function(decodedToken) {
       var uid = decodedToken.uid;
       console.log(decodedToken);
 
       req.uid = uid;
 
+      //check the database to get the users role
       res.locals.connection.query("SELECT userRole from users where ID = ? ",uid, function (error, results, fields) {
           if (error) {
 
@@ -32,6 +53,9 @@ var validate = function (req, res, next){
               err.error = error;
               next(err);
           }else if (results.length === 0) {
+
+              //if it gets here then the user has a firebase account but does not have
+              // an account in our database, this is bad
               var err = new Error("User does not exist, sign up for an account");
               err.status = 401;
               err.code = "auth/user-not-exists";
@@ -70,6 +94,17 @@ var validate = function (req, res, next){
     });
 };
 
+/**
+ * This endpoint is used when the client wants to get a list of multiple users.
+ * Different users will get a different set of results when they make this call.
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.get("/", validate, function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
@@ -174,39 +209,120 @@ router.get("/", validate, function(req, res, next) {
     }
 });
 
+/**
+ * This endpoint is used to create a new user account. This will create the user
+ * in our database as well as in firebase.
+ * The firebase user account gets created first.
+ *
+ * The user does not need to be authenticated to use this endpoint.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.post("/", function(req, res, next) {
 
     var admin = req.app.get("admin");
 
-
     res.setHeader('Content-Type', 'application/json');
+
+
+    var invalidFields = {};
+
+    if (req.body.first_name === undefined || req.body.first_name.length >= 60) {
+        invalidFields.first_name = "first_name is invalid \"" + req.body.first_name + "\"";
+    }
+
+    if (req.body.last_name === undefined || req.body.last_name.length >= 60) {
+        invalidFields.last_name = "last_name is invalid \"" + req.body.last_name + "\"";
+    }
+
+    if (req.body.gender !== undefined && (req.body.gender > 3 || req.body.gender < 0)) {
+        invalidFields.gender = "gender is invalid \"" + req.body.gender + "\"";
+    }
+
+    if (req.body.email === undefined || req.body.email.length >= 60) {
+        invalidFields.email = "email is invalid \"" + req.body.email + "\"";
+    }
+
+    if (req.body.with_CLC !== undefined && (req.body.with_CLC != true || req.body.with_CLC != false )) {
+        invalidFields.with_CLC = "with_CLC is invalid \"" + req.body.with_CLC + "\"";
+    }
+
+    if (req.body.display_name === undefined) {
+        req.body.display_name = req.body.first_name + " " + req.body.last_name;
+    }
+
+    if (req.body.display_name.length >= 120) {
+        invalidFields.display_name = "display_name is invalid \"" + req.body.display_name + "\"";
+    }
+
+    var phoneFormat = /^\([0-9]{3}\)[0-9]{3}-[0-9]{4}$/;
+
+    if (req.body.phone_number === undefined || phoneFormat.test(req.body.phone_number) === false) {
+        invalidFields.phone_number = "phone_number is invalid \"" + req.body.phone_number + "\"";
+    }
+
+    if (req.body.recovery_q1 === undefined || req.body.recovery_q1.length === 0 || req.body.recovery_q1.length >= 250) {
+        invalidFields.recovery_q1 = "recovery_q1 is invalid \"" + req.body.recovery_q1 + "\"";
+    }
+
+    if (req.body.recovery_a1 === undefined || req.body.recovery_a1.length === 0 || req.body.recovery_a1.length >= 250) {
+        invalidFields.recovery_a1 = "recovery_a1 is invalid \"" + req.body.recovery_a1 + "\"";
+    }
+
+    if (req.body.recovery_q2 === undefined || req.body.recovery_q2.length === 0 || req.body.recovery_q2.length >= 250) {
+        invalidFields.recovery_q2 = "recovery_q2 is invalid \"" + req.body.recovery_q2 + "\"";
+    }
+
+    if (req.body.recovery_a2 === undefined || req.body.recovery_a2.length === 0 || req.body.recovery_a2.length >= 250) {
+        invalidFields.recovery_a2 = "recovery_a2 is invalid \"" + req.body.recovery_a2 + "\"";
+    }
+
+    //make sure that at least 1 field is being updated
+    if (Object.keys(invalidFields).length !== 0)
+    {
+        var err = new Error("Invalid fields given");
+        err.status = 400;
+        err.code = "bad-req";
+        err.error = invalidFields;
+        next(err);
+        return;
+    }
+
+    // load the sent data into the struct to put into the database
+    var data =
+    {
+        firstname:      req.body.first_name,
+        lastname:       req.body.last_name,
+        birthday:       req.body.birthday,
+        email:          req.body.email,
+        gender:         req.body.gender || 0,
+        partOfCLC:      req.body.with_CLC || false,
+        enabled:        true,
+        displayName:    req.body.display_name || (req.body.first_name + " " + req.body.last_name),
+        phoneNumber:    req.body.phone_number,
+        recoveryQ1:     req.body.recovery_q1,
+        recoveryA1:     req.body.recovery_a1,
+        recoveryQ2:     req.body.recovery_q2,
+        recoveryA2:     req.body.recovery_a2
+    };
 
 
     admin.auth().createUser({
         email:        req.body.email,
         password:     req.body.password,
-        firstName:    req.body.first_name,
-        lastName:     req.body.last_name
+        displayName:  req.body.first_name + " " + req.body.last_name
     })
     .then(function(userRecord) {
         // See the UserRecord reference doc for the contents of userRecord.
         console.log("Successfully created new user:", userRecord.uid);
 
-        var data =
-        {
-            ID:             userRecord.uid,
-            firstname:      req.body.first_name,
-            lastname:       req.body.last_name,
-            birthday:       req.body.birthday,
-            email:          req.body.email,
-            enabled:        true,
-            displayName:    req.body.display_name || (req.body.first_name + " " + req.body.last_name),
-            phoneNumber:    req.body.phone_number,
-            recoveryQ1:     req.body.recovery_q1,
-            recoveryA1:     req.body.recovery_a1,
-            recoveryQ2:     req.body.recovery_q2,
-            recoveryA2:     req.body.recovery_a2
-        };
+
+        //add the users ID to the sql payload
+        data.ID = userRecord.uid;
+
 
         // add the user to the database
         res.locals.connection.query("INSERT into users set ?", data, function (error, results, fields) {
@@ -232,62 +348,140 @@ router.post("/", function(req, res, next) {
     });
 });
 
+/**
+ * This endpoint is used to create a new user account. This will update the users
+ * information in the database, if the users name or email is changed then the firebase
+ * user will also be updated.
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.patch("/", validate, function(req, res, next) {
 
+    var admin = req.app.get("admin");
     res.setHeader('Content-Type', 'application/json');
 
     var uid = req.uid;
 
 
+    var invalidFields = {};
 
-
-
-    // add input validaton here
-
-
-    var data = {};
-    if (req.body.first_name !== undefined) {
-        data.firstname = req.body.first_name;
+    if (req.body.first_name !== undefined && req.body.first_name.length >= 60) {
+        invalidFields.first_name = "first_name is invalid \"" + req.body.first_name + "\"";
     }
 
-    if (req.body.last_name !== undefined) {
-        data.lastname = req.body.last_name;
+    if (req.body.last_name !== undefined && req.body.last_name.length >= 60) {
+        invalidFields.last_name = "last_name is invalid \"" + req.body.last_name + "\"";
     }
 
-    if (req.body.birthday !== undefined) {
-        data.birthday = req.body.birthday;
+    if (req.body.gender !== undefined && (req.body.gender > 3 || req.body.gender < 0)) {
+        invalidFields.gender = "gender is invalid \"" + req.body.gender + "\"";
     }
 
-    if (req.body.display_name !== undefined) {
-        data.displayName = req.body.display_name;
+    if (req.body.email !== undefined && req.body.email.length >= 60) {
+        invalidFields.email = "email is invalid \"" + req.body.email + "\"";
     }
 
-    if (req.body.phone_number !== undefined) {
-        data.phoneNumber = req.body.phone_number;
+    if (req.body.with_CLC !== undefined && (req.body.with_CLC != true || req.body.with_CLC != false )) {
+        invalidFields.with_CLC = "with_CLC is invalid \"" + req.body.with_CLC + "\"";
     }
 
-    if (req.body.recovery_q1 !== undefined) {
-        data.recoveryQ1 = req.body.recovery_q1;
+    if (req.body.display_name !== undefined && req.body.display_name.length >= 120) {
+        invalidFields.display_name = "display_name is invalid \"" + req.body.display_name + "\"";
     }
 
-    if (req.body.recovery_a1 !== undefined) {
-        data.recoveryA1 = req.body.recovery_a1;
+    var phoneFormat = /^\([0-9]{3}\)[0-9]{3}-[0-9]{4}$/;
+
+    if (req.body.phone_number !== undefined && phoneFormat.test(req.body.phone_number) === false) {
+        invalidFields.phone_number = "phone_number is invalid \"" + req.body.phone_number + "\"";
     }
 
-    if (req.body.recovery_q2 !== undefined) {
-        data.recoveryQ2 = req.body.recovery_q2;
+    if (req.body.recovery_q1 !== undefined && (req.body.recovery_q1.length === 0 || req.body.recovery_q1.length >= 250)) {
+        invalidFields.recovery_q1 = "recovery_q1 is invalid \"" + req.body.recovery_q1 + "\"";
     }
 
-    if (req.body.recovery_a1 !== undefined) {
-        data.recoveryA2 = req.body.recovery_a1;
+    if (req.body.recovery_a1 !== undefined && (req.body.recovery_a1.length === 0 || req.body.recovery_a1.length >= 250)) {
+        invalidFields.recovery_a1 = "recovery_a1 is invalid \"" + req.body.recovery_a1 + "\"";
     }
 
-    if (req.body.email !== undefined) {
-        data.email = req.body.email;
+    if (req.body.recovery_q2 !== undefined && (req.body.recovery_q2.length === 0 || req.body.recovery_q2.length >= 250)) {
+        invalidFields.recovery_q2 = "recovery_q2 is invalid \"" + req.body.recovery_q2 + "\"";
+    }
+
+    if (req.body.recovery_a2 !== undefined && (req.body.recovery_a2.length === 0 || req.body.recovery_a2.length >= 250)) {
+        invalidFields.recovery_a2 = "recovery_a2 is invalid \"" + req.body.recovery_a2 + "\"";
     }
 
     //make sure that at least 1 field is being updated
-    if (Object.keys(data).length === 0)
+    if (Object.keys(invalidFields).length !== 0)
+    {
+        var err = new Error("Invalid fields given");
+        err.status = 400;
+        err.code = "bad-req";
+        err.error = invalidFields;
+        next(err);
+        return;
+    }
+
+
+    var firebaseData = {};
+    var sqlData = {};
+    if (req.body.first_name !== undefined) {
+        sqlData.firstname = req.body.first_name;
+    }
+
+    if (req.body.last_name !== undefined) {
+        sqlData.lastname = req.body.last_name;
+    }
+
+    if (req.body.email !== undefined) {
+        sqlData.email = req.body.email;
+        firebaseData.email = req.body.email;
+    }
+
+    if (req.body.birthday !== undefined) {
+        sqlData.birthday = req.body.birthday;
+    }
+
+    if (req.body.display_name !== undefined) {
+        sqlData.displayName = req.body.display_name;
+    }
+
+    if (req.body.phone_number !== undefined) {
+        sqlData.phoneNumber = req.body.phone_number;
+    }
+
+    if (req.body.gender !== undefined) {
+        sqlData.gender = req.body.gender;
+    }
+
+    if (req.body.with_CLC !== undefined) {
+        sqlData.partOfCLC = req.body.with_CLC;
+    }
+
+    if (req.body.recovery_q1 !== undefined) {
+        sqlData.recoveryQ1 = req.body.recovery_q1;
+    }
+
+    if (req.body.recovery_a1 !== undefined) {
+        sqlData.recoveryA1 = req.body.recovery_a1;
+    }
+
+    if (req.body.recovery_q2 !== undefined) {
+        sqlData.recoveryQ2 = req.body.recovery_q2;
+    }
+
+    if (req.body.recovery_a1 !== undefined) {
+        sqlData.recoveryA2 = req.body.recovery_a1;
+    }
+
+
+    //make sure that at least 1 field is being updated
+    if (Object.keys(sqlData).length === 0)
     {
         var err = new Error("No values are given to update.");
         err.status = 400;
@@ -296,7 +490,7 @@ router.patch("/", validate, function(req, res, next) {
         next(err);
     }
 
-    res.locals.connection.query("UPDATE users set ? where ID = ?",[data, uid], function (error, results, fields) {
+    res.locals.connection.query("UPDATE users set ? where ID = ?",[sqlData, uid], function (error, results, fields) {
         if (error) {
             var err = new Error(error.sqlMessage);
             err.status = 500;
@@ -304,12 +498,46 @@ router.patch("/", validate, function(req, res, next) {
             err.error = error;
             next(err);
         } else {
-            res.status(200);
-            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+
+
+            if (Object.keys(firebaseData).length !== 0) {
+                admin.auth().updateUser(uid, firebaseData)
+                .then(function(userRecord) {
+                    // See the UserRecord reference doc for the contents of userRecord.
+                    console.log("Successfully updated user", userRecord.toJSON());
+
+                    res.status(200);
+                    res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+                })
+                .catch(function(error) {
+                    console.log("Error updating user:", error);
+                    var err = new Error(error.message);
+                    err.status = 500;
+                    err.code = error.code;
+                    err.error = error;
+                    next(err);
+                });
+            }
+            else {
+                res.status(200);
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+            }
         }
     });
 });
 
+
+/**
+ * This endpoint is used to get a single users data.
+ * Depending on the user permissions a different set of results will be shown.
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.get("/:userID", validate, function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
@@ -373,6 +601,17 @@ router.get("/:userID", validate, function(req, res, next) {
 
 });
 
+/**
+ * This endpoint is used to delete a single users account.
+ * An account can only be deleted by themselves or by an administrator.
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.delete("/:userID", validate, function(req, res, next) {
 
     res.setHeader('Content-Type', 'application/json');
