@@ -332,7 +332,7 @@
 			var year = $('#year').val();
 			var gender = $('input[name=gender]:checked').val();
 			var with_CLC = $('input[name=partOfCLC]:checked').val();
-			$.post("/account", { "firstName": firstName, "lastName": lastName, "password": password, "email": email, "gender": gender, "partOfCLC": with_CLC});
+			$.post("/v1/users", { "firstName": firstName, "lastName": lastName, "password": password, "email": email, "gender": gender, "partOfCLC": with_CLC});
 		});
 	 </script>
 </body>
