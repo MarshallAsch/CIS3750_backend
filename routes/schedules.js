@@ -72,29 +72,29 @@ var validate = function (req, res, next){
 /* +--------+
    | Create |
    +--------+ */
-router.post("/", validate, function(req,res,next) {
-
+router.post("/create", validate, function(req,res,next) {
+  console.log("Create Schedule");
 });
 
 /* +------+
    | Read |
    +------+ */
-router.get("/", validate, function(req,res,next) {
-
+router.get("/read", validate, function(req,res,next) {
+  console.log("Read Schedule");
 });
 
 /* +--------+
    | Update |
    +--------+ */
-router.post("/", validate, function(req,res,next) {
-
+router.post("/update", validate, function(req,res,next) {
+  console.log("Update Schedule");
 });
 
 /* +--------+
    | Delete |
    +--------+ */
-router.delete("/", validate, function(req,res,next) {
-
+router.delete("/delete", validate, function(req,res,next) {
+  console.log("Delete Schedule");
 });
 
 module.exports = router;
