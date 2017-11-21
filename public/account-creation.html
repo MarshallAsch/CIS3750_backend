@@ -11,8 +11,8 @@
 
     <!-- Custom styles for this template -->
     <!--<link href="../bootstrap/assets/css/signin.css" rel="stylesheet">-->
-    <link rel="stylesheet" href="../bootstrap/assets/css/fonts.css">
-    <link rel="stylesheet" href="../bootstrap/assets/css/font-awesome.css">
+    <!--<link rel="stylesheet" href="../bootstrap/assets/css/fonts.css">-->
+    <!--<link rel="stylesheet" href="../bootstrap/assets/css/font-awesome.css">-->
 
 <link rel=icon href=../AppLogo2.png>
     <style type="text/css">
@@ -278,12 +278,12 @@
                         <div class="row">
                             <div class="col-sm-6">
                                 <label class="radio-inline">
-                                    <input type="radio" name="partCLC" id="yesRadio" value="true" checked>&nbsp;&nbsp;I am part of Community Living Cambridge
+                                    <input type="radio" name="partOfCLC" id="isCLCRadio" value="true" checked>&nbsp;&nbsp;I am part of Community Living Cambridge
                                 </label>
                             </div>
                             <div class="col-sm-6">
                                 <label class="radio-inline">
-                                    <input type="radio" name="partCLC" id="noRadio" value="false" >&nbsp;&nbsp;I am not part of Community Living Cambridge
+                                    <input type="radio" name="partOfCLC" id="notCLCRadio"  value="false" checked >&nbsp;&nbsp;I am not part of Community Living Cambridge
                                 </label>
                             </div>
                         </div>
@@ -330,8 +330,9 @@
 			var month = $('#month').val();
 			var day = $('#day').val();
 			var year = $('#year').val();
-			var gender = "Gender";
-			$.post("/account", { "firstName": firstName, "lastName": lastName, "password": password, "email": email});
+			var gender = $('input[name=gender]:checked').val();
+			var with_CLC = $('input[name=partOfCLC]:checked').val();
+			$.post("/account", { "firstName": firstName, "lastName": lastName, "password": password, "email": email, "gender": gender, "partOfCLC": with_CLC});
 		});
 	 </script>
 </body>
