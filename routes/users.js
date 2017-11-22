@@ -19,7 +19,7 @@ var validate = function (req, res, next){
 
     res.setHeader('Content-Type', 'application/json');
 
-    if (req.get('content-type') !== 'application/json'  || req.method === 'GET') {
+    if (req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase()  || req.method === 'GET') {
         var err = new Error("Invalid content type. found \"" + req.get('content-type') + "\" excpected application/json.");
         err.status = 400;
         err.code = "invalid-content-type";
@@ -246,7 +246,7 @@ router.post("/", function(req, res, next) {
         invalidFields.email = "email is invalid \"" + req.body.email + "\"";
     }
 
-    if (req.body.with_CLC !== undefined && (req.body.with_CLC != true || req.body.with_CLC != false )) {
+    if (req.body.with_CLC !== undefined && (req.body.with_CLC.toUpperCase() !== "TRUE" && req.body.with_CLC.toUpperCase() !== "FALSE" )) {
         invalidFields.with_CLC = "with_CLC is invalid \"" + req.body.with_CLC + "\"";
     }
 
@@ -289,6 +289,14 @@ router.post("/", function(req, res, next) {
         err.error = invalidFields;
         next(err);
         return;
+    }
+
+
+    if (req.body.with_CLC !== "TRUE") {
+        req.body.with_CLC = true;
+    }
+    else if(req.body.with_CLC.toUpperCase() !== "FALSE" ) {
+        req.body.with_CLC = false;
     }
 
     // load the sent data into the struct to put into the database
@@ -386,7 +394,7 @@ router.patch("/", validate, function(req, res, next) {
         invalidFields.email = "email is invalid \"" + req.body.email + "\"";
     }
 
-    if (req.body.with_CLC !== undefined && (req.body.with_CLC != true || req.body.with_CLC != false )) {
+    if (req.body.with_CLC !== undefined && (req.body.with_CLC.toUpperCase() !== "TRUE" && req.body.with_CLC.toUpperCase() !== "FALSE" )) {
         invalidFields.with_CLC = "with_CLC is invalid \"" + req.body.with_CLC + "\"";
     }
 
@@ -427,6 +435,12 @@ router.patch("/", validate, function(req, res, next) {
         return;
     }
 
+    if (req.body.with_CLC !== "TRUE") {
+        req.body.with_CLC = true;
+    }
+    else if(req.body.with_CLC.toUpperCase() !== "FALSE" ) {
+        req.body.with_CLC = false;
+    }
 
     var firebaseData = {};
     var sqlData = {};
