@@ -19,7 +19,7 @@ var validate = function (req, res, next){
 
     res.setHeader('Content-Type', 'application/json');
 
-    if (req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase()  || req.method === 'GET') {
+    if (req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase()  && req.method !== 'GET') {
         var err = new Error("Invalid content type. found \"" + req.get('content-type') + "\" excpected application/json.");
         err.status = 400;
         err.code = "invalid-content-type";
