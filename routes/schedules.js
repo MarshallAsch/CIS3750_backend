@@ -1,5 +1,7 @@
 var express = require("express");
 var router = express.Router();
+var mysql = require("mysql");
+
 
 /**
  * This middleware functon will validate the users tokenID that was sent in the
@@ -99,7 +101,7 @@ var validate = function (req, res, next){
 router.post("/", validate, function(req,res,next) {
 
 
-    var curDate = res.locals.connection.raw('CURDATE()');
+    var curDate = mysql.raw('CURDATE()');
       var data = {
         client: req.uid,
         drug: req.body.drug_name,
@@ -112,7 +114,7 @@ router.post("/", validate, function(req,res,next) {
     };
 
     if (req.body.notes !== undefined) {
-        data.notes: req.body.notes
+        data.notes = req.body.notes
     }
 
     var rawDoses = req.body.doses;
@@ -124,44 +126,8 @@ router.post("/", validate, function(req,res,next) {
         dose.time = rawDoses[i].time;
         dose.notificationTime = rawDoses[i].notification_offset;
         dose.doseWindow = rawDoses[i].dose_window;
+        dosesToInsert.push(dose);
     }
-
-/*
-    res.locals.connection.query("START TRANSACTION", function (error, results, fields) {
-
-        if (error) {
-           var err = new Error(error.sqlMessage);
-           err.status = 500;
-           err.code = error.error;
-           err.error = error;
-           next(err);
-           return;
-         }
-
-        res.locals.connection.query("SET autocommit=0", function (error, results, fields) {
-          if (error) {
-             var err = new Error(error.sqlMessage);
-             err.status = 500;
-             err.code = error.error;
-             err.error = error;
-             next(err);
-           } else {
-           }
-       });
-
-
-        res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
-          if (error) {
-             var err = new Error(error.sqlMessage);
-             err.status = 500;
-             err.code = error.error;
-             err.error = error;
-             next(err);
-           } else {
-           }
-       });
-    });
-*/
 
 
     res.locals.connection.beginTransaction(function(err) {
@@ -207,26 +173,29 @@ router.post("/", validate, function(req,res,next) {
                   throw error;
                 });
               }
-              res.locals.connection.commit(function(err) {
-                if (err) {
-                  return res.locals.connection.rollback(function() {
-                      console.log('rollback');
-
-                      var err = new Error(error.sqlMessage);
-                      err.status = 500;
-                      err.code = error.error;
-                      err.error = error;
-                      next(err);
-                    throw err;
-                  });
-                }
-
-                console.log('success!');
-                res.status(201);
-                res.send({"status": 201, "error": null, "response": results});
-              });
+              else {
+                  console.log(results);
+              }
             });
         }
+        res.locals.connection.commit(function(err) {
+          if (err) {
+            return res.locals.connection.rollback(function() {
+                console.log('rollback');
+
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+              throw err;
+            });
+          }
+
+          console.log('success!');
+          res.status(201);
+          res.send({"status": 201, "error": null, "response": results});
+        });
 
 
       });
