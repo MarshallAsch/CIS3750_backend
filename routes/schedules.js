@@ -1,5 +1,8 @@
 var express = require("express");
 var router = express.Router();
+var mysql = require("mysql");
+var async = require("async");
+
 
 /**
  * This middleware functon will validate the users tokenID that was sent in the
@@ -97,70 +100,113 @@ var validate = function (req, res, next){
    | Create |
    +--------+ */
 router.post("/", validate, function(req,res,next) {
-  var data = {
-    client: req.uid,
-    drug: req.body.drug_name,
-    doseUnit: req.body.dose_units,
-    dose: req.body.dose_quantity,
-    createdByStaff: req.supportWorker || false,
-    enabled:  true,
-    startDate: req.body.start_date || 'CURDATE()',
-    endDate: req.body.end_date || '9999-12-31',
-    notes: req.body.notes
-};
+  
+    var curDate = mysql.raw('CURDATE()');
+    var data = {
+        client: req.uid,
+        drug: req.body.drug_name,
+        doseUnit: req.body.dose_units,
+        dose: req.body.dose_quantity,
+        createdByStaff: req.supportWorker || false,
+        enabled:  true,
+        startDate: req.body.start_date || curDate,
+        endDate: req.body.end_date || '9999-12-31'
+    };
 
-var rawDoses = req.body.doses;
-var dosesToInsert = [];
-var dose = {};
+    if (req.body.notes !== undefined) {
+        data.notes = req.body.notes
+    }
 
-for (var i = 0; i < rawDoses.length; i++) {
-    dose.day = rawDoses[i].day;
-    dose.time = rawDoses[i].time;
-    dose.notificationTime = rawDoses[i].notification_offset;
-    dose.doseWindow = rawDoses[i].dose_window;
-}
+    var rawDoses = req.body.doses;
+    var dosesToInsert = [];
 
 
+    for (var i = 0; i < rawDoses.length; i++) {
+        var dose = {};
+        dose.day = rawDoses[i].day;
+        dose.time = rawDoses[i].time;
+        dose.notificationTime = rawDoses[i].notification_offset;
+        dose.doseWindow = rawDoses[i].dose_window;
+        dosesToInsert.push(dose);
+    }
 
-  res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
-    console.log(fields);
-    console.log(results);
-    if (error) {
-       var err = new Error(error.sqlMessage);
-       err.status = 500;
-       err.code = error.error;
-       err.error = error;
-       next(err);
-     } else {
 
-         var scheduleID = results.insertId;
+    res.locals.connection.beginTransaction(function(err) {
+      if (err) {
+          var err = new Error(error.sqlMessage);
+          err.status = 500;
+          err.code = error.error;
+          err.error = error;
+          console.log('error');
 
-         for (var i = 0; i < dosesToInsert.length; i++) {
-             dosesToInsert[i].scheduleID = scheduleID;
-         }
-
-         res.locals.connection.query("INSERT into dose set ?", dosesToInsert, function (error, results, fields) {
-           if (error) {
+          next(err);
+          return;
+      }
+      res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
+        if (error) {
+          return res.locals.connection.rollback(function() {
               var err = new Error(error.sqlMessage);
               err.status = 500;
               err.code = error.error;
               err.error = error;
+              console.log('rollback');
+
               next(err);
-            } else {
+            //throw error;
+          });
+        }
 
-                var scheduleID = results.insertId;
+        var scheduleID = results.insertId;
+        var calls = [];
 
-                for (var i = 0; i < dosesToInsert.length; i++) {
-                    dosesToInsert[i].ID = scheduleID;
-                }
+        dosesToInsert.forEach(function(dose) {
+            calls.push(function(callback){
 
+                dose.scheduleID = scheduleID;
 
-              res.status(201);
-              res.send({"status": 201, "error": null, "response": results});
+                res.locals.connection.query("INSERT into dose set ?", dose, function (error, results, fields) {
+                  if (error) {
+                      callback(error, results);
+                  }
+                  else {
+                      console.log("success drug " + results.insertId);
+                      callback(error, results);
+                  }
+                });
+            })
+        });
+
+        async.parallel(calls, function(error, result) {
+
+            if (error) {
+                return res.locals.connection.rollback(function() {
+                    console.log('rollback');
+                    next(error);
+                });
             }
-         });
-     }
-  });
+            else {
+                res.locals.connection.commit(function(err1) {
+                  if (err1) {
+                    return res.locals.connection.rollback(function() {
+                        console.log('rollback');
+                      
+                        var err = new Error(err1.sqlMessage);
+                        err.status = 500;
+                        err.code = err1.error;
+                        err.error = err1;
+                        next(err);
+                    });
+                  }
+
+                  console.log('success!');
+                  res.status(201);
+                  res.send({"status": 201, "error": null, "response": results});
+                });
+            }
+        })
+
+      });
+    });
 });
 
 
