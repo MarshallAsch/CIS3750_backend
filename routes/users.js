@@ -19,7 +19,7 @@ var validate = function (req, res, next){
 
     res.setHeader('Content-Type', 'application/json');
 
-    if (req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase()  || req.method !== 'GET') {
+    if (req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase()  && req.method !== 'GET') {
         var err = new Error("Invalid content type. found \"" + req.get('content-type') + "\" excpected application/json.");
         err.status = 400;
         err.code = "invalid-content-type";
@@ -39,8 +39,6 @@ var validate = function (req, res, next){
     // verify the users token with firebase authentication
     admin.auth().verifyIdToken(tokenID) .then(function(decodedToken) {
       var uid = decodedToken.uid;
-      console.log(decodedToken);
-
       req.uid = uid;
 
       //check the database to get the users role
@@ -62,7 +60,8 @@ var validate = function (req, res, next){
               next(err);
 
           } else {
-              if ((results[0].role & 0x10)  !== 0) {
+              userRole = results[0].userRole;
+              if ((userRole & 0b10)  === 2) {
                   req.supportWorker  = true;
               }
               else {
@@ -70,7 +69,8 @@ var validate = function (req, res, next){
               }
 
 
-              if ((results[0].role & 0x100)  !== 0) {
+              if ((userRole & 0b100)  === 4) {
+		  console.log("GOT HERE");
                   req.isAdmin  = true;
               }
               else {
@@ -794,5 +794,32 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
   }
 });
 
+/*------------------------------------------------------
+** ASSIGN CLIENT 2 SUPPORT WORKER ----------------------
+**------------------------------------------------------*/
+router.post("/:clientID/assign/:swID", validate, function(req,res,next) {
+  res.setHeader("Content-Type", "application/json");
+  var clientID = req.params.clientID;
+  var swID = req.params.swID;
+  if( req.isAdmin ) {
+    var q = "INSERT INTO clientMappings (client, supportWorker) VALUES (?,?) ";
+    res.locals.connection.query(q, [clientID, swID], function(error, results, fields) {
+      if (error) {
+        var err = new Error(error.sqlMessage);
+        err.status = 500;
+        err.code = error.error;
+        err.error = error;
+        next(err);
+      } else {
+        res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+      }
+   });
 
+  } else {
+    var err = new Error("Permissions Error");
+    err.status = 403;
+    next(err);
+  }
+});
 module.exports = router;
+

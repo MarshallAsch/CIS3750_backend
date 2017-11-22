@@ -104,7 +104,7 @@ router.post("/", validate, function(req,res,next) {
     dose: req.body.dose_quantity,
     createdByStaff: req.supportWorker || false,
     enabled:  true,
-    startDate req.body.start_date || 'CURDATE()',
+    startDate: req.body.start_date || 'CURDATE()',
     endDate: req.body.end_date || '9999-12-31',
     notes: req.body.notes
 };
