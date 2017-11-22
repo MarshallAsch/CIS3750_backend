@@ -100,10 +100,9 @@ var validate = function (req, res, next){
    | Create |
    +--------+ */
 router.post("/", validate, function(req,res,next) {
-
-
+  
     var curDate = mysql.raw('CURDATE()');
-      var data = {
+    var data = {
         client: req.uid,
         drug: req.body.drug_name,
         doseUnit: req.body.dose_units,
@@ -158,9 +157,6 @@ router.post("/", validate, function(req,res,next) {
         }
 
         var scheduleID = results.insertId;
-        var insertError = false;
-
-
         var calls = [];
 
         dosesToInsert.forEach(function(dose) {
@@ -170,11 +166,7 @@ router.post("/", validate, function(req,res,next) {
 
                 res.locals.connection.query("INSERT into dose set ?", dose, function (error, results, fields) {
                   if (error) {
-
                       callback(error, results);
-
-                     // throw error;
-
                   }
                   else {
                       console.log("success drug " + results.insertId);
@@ -184,18 +176,12 @@ router.post("/", validate, function(req,res,next) {
             })
         });
 
-
         async.parallel(calls, function(error, result) {
 
             if (error) {
                 return res.locals.connection.rollback(function() {
-                    var err = new Error(error.sqlMessage);
-                    err.status = 500;
-                    err.code = error.error;
-                    err.error = error;
                     console.log('rollback');
-                    insertError = true;
-                    next(err);
+                    next(error);
                 });
             }
             else {
@@ -203,13 +189,12 @@ router.post("/", validate, function(req,res,next) {
                   if (err1) {
                     return res.locals.connection.rollback(function() {
                         console.log('rollback');
-
-                        var err = new Error(error.sqlMessage);
+                      
+                        var err = new Error(err1.sqlMessage);
                         err.status = 500;
-                        err.code = error.error;
-                        err.error = error;
+                        err.code = err1.error;
+                        err.error = err1;
                         next(err);
-                     // throw err;
                     });
                   }
 
