@@ -4,4 +4,5 @@ node_modules/*
 *.pem
 *.key
 *.crt
+*.save
 cis3750team31-firebase-adminsdk-sm0bf-189b38796f.json

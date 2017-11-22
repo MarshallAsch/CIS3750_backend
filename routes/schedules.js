@@ -64,16 +64,16 @@ var validate = function (req, res, next){
               next(err);
 
           } else {
-              if ((results[0].role & 0x10)  !== 0) {
-                  req.supportWorker  = true;
+              var userRole = results[0].userRole;
+              if ((userRole & 0b10) === 2) {
+                  req.supportWorker = true;
               }
               else {
                   req.supportWorker = false;
               }
 
-
-              if ((results[0].role & 0x100)  !== 0) {
-                  req.isAdmin  = true;
+              if ((userRole & 0b100) === 4) {
+                  req.isAdmin = true;
               }
               else {
                   req.isAdmin = false;
@@ -100,7 +100,7 @@ var validate = function (req, res, next){
    | Create |
    +--------+ */
 router.post("/", validate, function(req,res,next) {
-  
+
     var curDate = mysql.raw('CURDATE()');
     var data = {
         client: req.uid,
@@ -189,7 +189,7 @@ router.post("/", validate, function(req,res,next) {
                   if (err1) {
                     return res.locals.connection.rollback(function() {
                         console.log('rollback');
-                      
+
                         var err = new Error(err1.sqlMessage);
                         err.status = 500;
                         err.code = err1.error;
