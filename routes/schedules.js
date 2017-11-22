@@ -97,31 +97,142 @@ var validate = function (req, res, next){
    | Create |
    +--------+ */
 router.post("/", validate, function(req,res,next) {
-  var data = {
-    client: req.uid,
-    drug: req.body.drug_name,
-    doseUnit: req.body.dose_units,
-    dose: req.body.dose_quantity,
-    createdByStaff: req.supportWorker || false,
-    enabled:  true,
-    startDate req.body.start_date || 'CURDATE()',
-    endDate: req.body.end_date || '9999-12-31',
-    notes: req.body.notes
-};
-
-var rawDoses = req.body.doses;
-var dosesToInsert = [];
-var dose = {};
-
-for (var i = 0; i < rawDoses.length; i++) {
-    dose.day = rawDoses[i].day;
-    dose.time = rawDoses[i].time;
-    dose.notificationTime = rawDoses[i].notification_offset;
-    dose.doseWindow = rawDoses[i].dose_window;
-}
 
 
+    var curDate = res.locals.connection.raw('CURDATE()');
+      var data = {
+        client: req.uid,
+        drug: req.body.drug_name,
+        doseUnit: req.body.dose_units,
+        dose: req.body.dose_quantity,
+        createdByStaff: req.supportWorker || false,
+        enabled:  true,
+        startDate: req.body.start_date || curDate,
+        endDate: req.body.end_date || '9999-12-31'
+    };
 
+    if (req.body.notes !== undefined) {
+        data.notes: req.body.notes
+    }
+
+    var rawDoses = req.body.doses;
+    var dosesToInsert = [];
+    var dose = {};
+
+    for (var i = 0; i < rawDoses.length; i++) {
+        dose.day = rawDoses[i].day;
+        dose.time = rawDoses[i].time;
+        dose.notificationTime = rawDoses[i].notification_offset;
+        dose.doseWindow = rawDoses[i].dose_window;
+    }
+
+/*
+    res.locals.connection.query("START TRANSACTION", function (error, results, fields) {
+
+        if (error) {
+           var err = new Error(error.sqlMessage);
+           err.status = 500;
+           err.code = error.error;
+           err.error = error;
+           next(err);
+           return;
+         }
+
+        res.locals.connection.query("SET autocommit=0", function (error, results, fields) {
+          if (error) {
+             var err = new Error(error.sqlMessage);
+             err.status = 500;
+             err.code = error.error;
+             err.error = error;
+             next(err);
+           } else {
+           }
+       });
+
+
+        res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
+          if (error) {
+             var err = new Error(error.sqlMessage);
+             err.status = 500;
+             err.code = error.error;
+             err.error = error;
+             next(err);
+           } else {
+           }
+       });
+    });
+*/
+
+
+    res.locals.connection.beginTransaction(function(err) {
+      if (err) {
+          var err = new Error(error.sqlMessage);
+          err.status = 500;
+          err.code = error.error;
+          err.error = error;
+          console.log('error');
+
+          next(err);
+          return;
+      }
+      res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
+        if (error) {
+          return res.locals.connection.rollback(function() {
+              var err = new Error(error.sqlMessage);
+              err.status = 500;
+              err.code = error.error;
+              err.error = error;
+              console.log('rollback');
+
+              next(err);
+            throw error;
+          });
+        }
+
+        var scheduleID = results.insertId;
+
+        for (var i = 0; i < dosesToInsert.length; i++) {
+            dosesToInsert[i].scheduleID = scheduleID;
+
+            res.locals.connection.query("INSERT into dose set ?", dosesToInsert[i], function (error, results, fields) {
+              if (error) {
+                return res.locals.connection.rollback(function() {
+                    var err = new Error(error.sqlMessage);
+                    err.status = 500;
+                    err.code = error.error;
+                    err.error = error;
+                    console.log('rollback');
+
+                    next(err);
+                  throw error;
+                });
+              }
+              res.locals.connection.commit(function(err) {
+                if (err) {
+                  return res.locals.connection.rollback(function() {
+                      console.log('rollback');
+
+                      var err = new Error(error.sqlMessage);
+                      err.status = 500;
+                      err.code = error.error;
+                      err.error = error;
+                      next(err);
+                    throw err;
+                  });
+                }
+
+                console.log('success!');
+                res.status(201);
+                res.send({"status": 201, "error": null, "response": results});
+              });
+            });
+        }
+
+
+      });
+    });
+
+/*
   res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
     if (error) {
        var err = new Error(error.sqlMessage);
@@ -159,6 +270,7 @@ for (var i = 0; i < rawDoses.length; i++) {
          });
      }
   });
+*/
 });
 
 
