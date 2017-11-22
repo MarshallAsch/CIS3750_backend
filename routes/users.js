@@ -19,7 +19,7 @@ var validate = function (req, res, next){
 
     res.setHeader('Content-Type', 'application/json');
 
-    if (req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase()  || req.method === 'GET') {
+    if (req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase()  || req.method !== 'GET') {
         var err = new Error("Invalid content type. found \"" + req.get('content-type') + "\" excpected application/json.");
         err.status = 400;
         err.code = "invalid-content-type";
@@ -733,7 +733,7 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
   if (uid == userID) {
     /* Process the request from the perspective of a
     ** client modifying their own schedule */
-    q = "SELECT * from schedule where ID = ?";
+    q = "SELECT * from schedule where client = ?";
     res.locals.connection.query(q, userID, function(error, results, fields) {
       if (error) {
         var err = new Error(error.sqlMessage);
@@ -763,7 +763,7 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
     });
   } else if (res.isAdmin) {
     /* Process the request immediately without question */
-    q = "SELECT * from schedule where ID = ?";
+    q = "SELECT * from schedule where client = ?";
     res.locals.connection.query(q, userID, function(error, results, fields) {
       if (error) {
         var err = new Error(error.sqlMessage);
@@ -775,8 +775,23 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
         res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
       }
     });
+  } else {
+    /* Process the request as if one client wants to
+    ** access another clients schedule */
+    q1 = "SELECT clientID FROM  schedulePermissions WHERE observerID = ? AND clientID = ?";
+    q2 = "SELECT * from schedule where client = (" + q1 + ")";
+    res.locals.connection.query(q2, [uid, userID], function(error, results, fields) {
+      if (error) {
+        var err = new Error(error.sqlMessage);
+        err.status = 500;
+        err.code = error.error;
+        err.error = error;
+        next(err);
+      } else {
+        res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+      }
+   });
   }
-
 });
 
 
