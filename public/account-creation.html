@@ -334,15 +334,19 @@
 			var phoneNumber = $('#phoneNumber').val();
 			var gender = $('input[name=gender]:checked').val();
 			var with_CLC = $('input[name=partOfCLC]:checked').val();
+			var displayName = "jdarnit";
+			var recovery_q1 = "Why do the kids hate me?";
+			var recovery_a1 = "PB&J";
+			var recovery_q2 = "What I was doing?";
+			var recovery_a2 = "Doing the exact instructions challenge.";
 
 			$.ajax({
 				type	:	"POST",
 				url	:	"/v1/users",
-				data	:	JSON.stringify({ "first_name": firstName, "last_name": lastName, "birthday": birthday, "email": email, "gender": gender, "with_CLC": with_CLC,  "password": password, "display_name": "jdarnit", "phone_number": phoneNumber, "recovery_q1": "Why do the kids hate me?", "recovery_a1": "PB&J", "recovery_q2": "What was I doing with PB&J?", "recovery_a2": "Exact challenge." }),
+				data	:	JSON.stringify({ "first_name": firstName, "last_name": lastName, "birthday": birthday, "email": email, "gender": gender, "with_CLC": with_CLC,  "password": password, "display_name": displayName, "phone_number": phoneNumber, "recovery_q1": recovery_q1, "recovery_a1": recovery_a1, "recovery_q2": recovery_q2, "recovery_a2": recovery_a2 }),
 				dataType:	"json",
 				contentType:	"application/json; charset=utf-8"
 			});
-			//$.post("/v1/users", { "first_name": firstName, "last_name": lastName, "birthday": birthday, "email": email, "gender": gender, "with_CLC": with_CLC, "password": password, "display_name": "jdarnit", "phone_number": phoneNumber, "recovery_q1": "Why do the kids hate me?", "recovery_a1": "PB&J", "recovery_q2": "What was I doing with PB&J?", "recovery_a2": "Exact challenge." });
 		});
 	 </script>
 </body>
