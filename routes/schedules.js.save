@@ -8,6 +8,7 @@ var validate = function (req, res, next){
     res.setHeader('Content-Type', 'application/json');
 
     if (tokenID === undefined) {
+
         var err = new Error("You need to authenticate yourself with the X-API-KEY header");
         err.status = 401;
         err.code = "auth/argument-missing";
@@ -16,6 +17,7 @@ var validate = function (req, res, next){
 
     admin.auth().verifyIdToken(tokenID) .then(function(decodedToken) {
       var uid = decodedToken.uid;
+      console.log(decodedToken);
 
       req.uid = uid;
 
@@ -69,30 +71,17 @@ var validate = function (req, res, next){
 /* +--------+
    | Create |
    +--------+ */
-router.post("/", validate, function(req,res,next) {
+router.post("/create", validate, function(req,res,next) {
   var data = {
-    client: req.uid,
-    drug: req.body.drug_name,
-    doseUnit: req.body.dose_units,
-    dose: req.body.dose_quantity,
-    createdByStaff: req.body.created_by_staff || false, // need to verify staff identity, here
-    enabled: req.body.enabled || true,
-    vacationUntil: req.body.vacationUntil,
-    startDate: req.body.start_date,
-    endDate: req.body.end_date
-  }
-  res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
-    if (error) {
-       var err = new Error(error.sqlMessage);
-       err.status = 500;
-       err.code = error.error;
-       err.error = error;
-       next(err);
-     } else {
-       res.status(201);
-       res.send({"status": 200, "error": null, "response": results});
-     }
-  });
+    ID: res.
+  };
+});
+
+/* +------+
+   | Read |
+   +------+ */
+router.get("/read", validate, function(req,res,next) {
+  console.log("Read Schedule");
 });
 
 /* +--------+
@@ -105,7 +94,7 @@ router.post("/update", validate, function(req,res,next) {
 /* +--------+
    | Delete |
    +--------+ */
-router.delete("/", validate, function(req,res,next) {
+router.delete("/delete", validate, function(req,res,next) {
   console.log("Delete Schedule");
 });
 

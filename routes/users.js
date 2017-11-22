@@ -1,7 +1,6 @@
 var express = require("express");
 var router = express.Router();
 
-
 var validate = function (req, res, next){
     var admin = req.app.get("admin");
     var tokenID = req.get("X-API-KEY");
@@ -15,7 +14,6 @@ var validate = function (req, res, next){
         err.code = "auth/argument-missing";
         next(err);
     }
-
 
     admin.auth().verifyIdToken(tokenID) .then(function(decodedToken) {
       var uid = decodedToken.uid;
@@ -174,14 +172,23 @@ router.get("/", validate, function(req, res, next) {
     }
 });
 
+
+/*+------------------+
+  | Account Creation |
+  +------------------+*/
 router.post("/", function(req, res, next) {
 
     var admin = req.app.get("admin");
 
 
     res.setHeader('Content-Type', 'application/json');
-
-
+    /* Need to catch and check:
+    ** req.headers["content-type"] is set and equals application/json
+    ** req.body.email exists
+    ** req.body.password exists
+    ** req.body.first_name exists
+    ** req.body.last_name exists
+    */
     admin.auth().createUser({
         email:        req.body.email,
         password:     req.body.password,
@@ -448,6 +455,81 @@ router.delete("/:userID", validate, function(req, res, next) {
         err.code = "permission-denied";
         next(err);
     }
+
+});
+
+
+/*------------------------------------------------------
+** GET SCHEDULES ---------------------------------------
+**------------------------------------------------------*/
+/* +------+
+   | Read |
+   +------+ */
+router.get("/:userID/schedules", validate, function(req,res,next) {
+  res.setHeader("Content-Type", "application/json");
+
+  var userID = req.params.userID;
+  var uid = req.uid;
+
+  var limit = parseInt(req.query.limit, 10) || 20;
+  var offset = parseInt(req.query.offset, 10) || 0;
+
+  if (limit > 50) {
+    limit = 50;
+  } else if (limit < 1) {
+    limit = 1;
+  }
+
+  if( offset < 0) {
+    offset = 0;
+  }
+
+  if (uid == userID) {
+    /* Process the request from the perspective of a
+    ** client modifying their own schedule */
+    q = "SELECT * from schedule where ID = ?";
+    res.locals.connection.query(q, userID, function(error, results, fields) {
+      if (error) {
+        var err = new Error(error.sqlMessage);
+        err.status = 500;
+        err.code = error.error;
+        err.error = error;
+        next(err);
+      }else {
+        res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+      }
+    });
+  } else if (res.isSupportWorker) {
+    /* Process the request only if the support worker
+    ** has authority over the clients schedule */
+    q1 = "SELECT client FROM clientMappings WHERE supportWorker = ? AND client = ?";
+    q2 = "SELECT * FROM schedule WHERE client = (" + q1 + ")";
+    res.locals.connection.query(q2, [uid, userID], function(error, results, fields) {
+      if (error) {
+        var err = new Error(error.sqlMessage);
+        err.status = 500;
+        err.code = error.error;
+        err.error = error;
+        next(err);
+      } else {
+        res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+      }
+    });
+  } else if (res.isAdmin) {
+    /* Process the request immediately without question */
+    q = "SELECT * from schedule where ID = ?";
+    res.locals.connection.query(q, userID, function(error, results, fields) {
+      if (error) {
+        var err = new Error(error.sqlMessage);
+        err.status = 500;
+        err.code = error.error;
+        err.error = error;
+        next(err);
+      } else {
+        res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+      }
+    });
+  }
 
 });
 
