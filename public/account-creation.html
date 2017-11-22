@@ -66,18 +66,18 @@
 
                             <div class="col-sm-3">
                                 <select class="form-control" id="month" name="month">
-                                        <option value="January">January</option>
-                                        <option value="February">February</option>
-                                        <option value="March">March</option>
-                                        <option value="April">April</option>
-                                        <option value="May">May</option>
-                                        <option value="June">June</option>
-                                        <option value="July">July</option>
-                                        <option value="August">August</option>
-                                        <option value="September">September</option>
-                                        <option value="October">October</option>
-                                        <option value="November">November</option>
-                                        <option value="December">December</option>
+                                        <option value="01">January</option>
+                                        <option value="02">February</option>
+                                        <option value="03">March</option>
+                                        <option value="04">April</option>
+                                        <option value="05">May</option>
+                                        <option value="06">June</option>
+                                        <option value="07">July</option>
+                                        <option value="08">August</option>
+                                        <option value="09">September</option>
+                                        <option value="10">October</option>
+                                        <option value="11">November</option>
+                                        <option value="12">December</option>
                                 </select> 
                             </div>
                             <div class="col-sm-3">
@@ -255,17 +255,17 @@
                         <div class="row">
                             <div class="col-sm-4">
                                 <label class="radio-inline">
-                                    <input type="radio" name="gender" id="femaleRadio" value="female">&nbsp;&nbsp;Female
+                                    <input type="radio" name="gender" id="femaleRadio" value="2">&nbsp;&nbsp;Female
                                 </label>
                             </div>
                             <div class="col-sm-4">
                                 <label class="radio-inline">
-                                    <input type="radio" name="gender" id="maleRadio" value="male">&nbsp;&nbsp;Male
+                                    <input type="radio" name="gender" id="maleRadio" value="1">&nbsp;&nbsp;Male
                                 </label>
                             </div>
                             <div class="col-sm-4">
                                 <label class="radio-inline">
-                                    <input type="radio" name="gender" id="otherRadio" value="other">&nbsp;&nbsp;Other
+                                    <input type="radio" name="gender" id="otherRadio" value="3">&nbsp;&nbsp;Other
                                 </label>
                             </div>
                         </div>
@@ -334,7 +334,15 @@
 			var phoneNumber = $('#phoneNumber').val();
 			var gender = $('input[name=gender]:checked').val();
 			var with_CLC = $('input[name=partOfCLC]:checked').val();
-			$.post("/v1/users", { "first_name": firstName, "last_name": lastName, "birthday": birthday, "email": email, "password": password, "display_name": "jdarnit", "phone_number": phoneNumber, "recovery_q1": "Why do the kids hate me?", "recovery_a1": "PB&J", "recovery_q2": "What was I doing with PB&J?", "recovery_a2": "Exact challenge." });
+
+			$.ajax({
+				type	:	"POST",
+				url	:	"/v1/users",
+				data	:	JSON.stringify({ "first_name": firstName, "last_name": lastName, "birthday": birthday, "email": email, "gender": gender, "with_CLC": with_CLC,  "password": password, "display_name": "jdarnit", "phone_number": phoneNumber, "recovery_q1": "Why do the kids hate me?", "recovery_a1": "PB&J", "recovery_q2": "What was I doing with PB&J?", "recovery_a2": "Exact challenge." }),
+				dataType:	"json",
+				contentType:	"application/json; charset=utf-8"
+			});
+			//$.post("/v1/users", { "first_name": firstName, "last_name": lastName, "birthday": birthday, "email": email, "gender": gender, "with_CLC": with_CLC, "password": password, "display_name": "jdarnit", "phone_number": phoneNumber, "recovery_q1": "Why do the kids hate me?", "recovery_a1": "PB&J", "recovery_q2": "What was I doing with PB&J?", "recovery_a2": "Exact challenge." });
 		});
 	 </script>
 </body>
