@@ -740,6 +740,7 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
                 next(err);
             }else {
                 res.status(200);
+		//add dose schedule to results?
                 res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
             }
         });
