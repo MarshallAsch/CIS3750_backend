@@ -1,6 +1,7 @@
 var express = require("express");
 var router = express.Router();
 var mysql = require("mysql");
+var async = require("async");
 
 
 /**
@@ -119,9 +120,10 @@ router.post("/", validate, function(req,res,next) {
 
     var rawDoses = req.body.doses;
     var dosesToInsert = [];
-    var dose = {};
+
 
     for (var i = 0; i < rawDoses.length; i++) {
+        var dose = {};
         dose.day = rawDoses[i].day;
         dose.time = rawDoses[i].time;
         dose.notificationTime = rawDoses[i].notification_offset;
@@ -151,97 +153,75 @@ router.post("/", validate, function(req,res,next) {
               console.log('rollback');
 
               next(err);
-            throw error;
+            //throw error;
           });
         }
 
         var scheduleID = results.insertId;
+        var insertError = false;
 
-        for (var i = 0; i < dosesToInsert.length; i++) {
-            dosesToInsert[i].scheduleID = scheduleID;
 
-            res.locals.connection.query("INSERT into dose set ?", dosesToInsert[i], function (error, results, fields) {
-              if (error) {
+        var calls = [];
+
+        dosesToInsert.forEach(function(dose) {
+            calls.push(function(callback){
+
+                dose.scheduleID = scheduleID;
+
+                res.locals.connection.query("INSERT into dose set ?", dose, function (error, results, fields) {
+                  if (error) {
+
+                      callback(error, results);
+
+                     // throw error;
+
+                  }
+                  else {
+                      console.log("success drug " + results.insertId);
+                      callback(error, results);
+                  }
+                });
+            })
+        });
+
+
+        async.parallel(calls, function(error, result) {
+
+            if (error) {
                 return res.locals.connection.rollback(function() {
                     var err = new Error(error.sqlMessage);
                     err.status = 500;
                     err.code = error.error;
                     err.error = error;
                     console.log('rollback');
-
+                    insertError = true;
                     next(err);
-                  throw error;
                 });
-              }
-              else {
-                  console.log(results);
-              }
-            });
-        }
-        res.locals.connection.commit(function(err) {
-          if (err) {
-            return res.locals.connection.rollback(function() {
-                console.log('rollback');
+            }
+            else {
+                res.locals.connection.commit(function(err1) {
+                  if (err1) {
+                    return res.locals.connection.rollback(function() {
+                        console.log('rollback');
 
-                var err = new Error(error.sqlMessage);
-                err.status = 500;
-                err.code = error.error;
-                err.error = error;
-                next(err);
-              throw err;
-            });
-          }
+                        var err = new Error(error.sqlMessage);
+                        err.status = 500;
+                        err.code = error.error;
+                        err.error = error;
+                        next(err);
+                     // throw err;
+                    });
+                  }
 
-          console.log('success!');
-          res.status(201);
-          res.send({"status": 201, "error": null, "response": results});
-        });
-
+                  console.log('success!');
+                  res.status(201);
+                  res.send({"status": 201, "error": null, "response": results});
+                });
+            }
+        })
 
       });
     });
-
-/*
-  res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
-    console.log(fields);
-    console.log(results);
-    if (error) {
-       var err = new Error(error.sqlMessage);
-       err.status = 500;
-       err.code = error.error;
-       err.error = error;
-       next(err);
-     } else {
-
-         var scheduleID = results.insertId;
-
-         for (var i = 0; i < dosesToInsert.length; i++) {
-             dosesToInsert[i].scheduleID = scheduleID;
-         }
-
-         res.locals.connection.query("INSERT into dose set ?", dosesToInsert, function (error, results, fields) {
-           if (error) {
-              var err = new Error(error.sqlMessage);
-              err.status = 500;
-              err.code = error.error;
-              err.error = error;
-              next(err);
-            } else {
-
-                var scheduleID = results.insertId;
-
-                for (var i = 0; i < dosesToInsert.length; i++) {
-                    dosesToInsert[i].ID = scheduleID;
-                }
-
-
-              res.status(201);
-              res.send({"status": 201, "error": null, "response": results});
-            }
-         });
-     }
-  });
-*/
 });
 
 
