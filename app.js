@@ -8,7 +8,6 @@ var http = require("http");
 var admin = require("firebase-admin");
 var mysql = require("mysql");
 
-
 var index = require(__dirname + "/routes/index");
 var users = require(__dirname + "/routes/users");
 
@@ -16,6 +15,7 @@ var app = express();
 
 require('dotenv').config({path: "config.env"});
 
+// Load the values from the environment variables
 var port = process.env.PORT || 3000;
 var dbHost = process.env.DBHOST || "localhost";
 var dbUser = process.env.DBUSERNAME || "cis3750_node";
@@ -44,36 +44,32 @@ app.use(express.static(path.join(__dirname, "public")));
 
 //Database connection
 app.use(function(req, res, next){
-	res.locals.connection = mysql.createConnection({
-		host     : dbHost,
-		user     : dbUser,
-		password : dbPass,
-		database : dbName
-	});
-	res.locals.connection.connect();
-	next();
+    res.locals.connection = mysql.createConnection({
+        host     : dbHost,
+        user     : dbUser,
+        password : dbPass,
+        database : dbName
+    });
+    res.locals.connection.connect();
+    next();
 });
 
 
+// define the data route handlers
 app.use("/", index);
 app.use("/v1/users", users);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  var err = new Error("Not Found");
-  err.status = 404;
-  next(err);
+    var err = new Error("Not Found");
+    err.status = 404;
+    next(err);
 });
 
-// error handler
+// capture all of the errors and resturn the error payload
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get("env") === "development" ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.send({"status": err.status || 500, "error": {message:  err.message, code: err}, "response": null});
+    res.status(err.status || 500);
+    res.send({"status": err.status || 500, "error": {message:  err.message || "Unknown Error", code: err.code || "err-unknown", error: err.error || err}, "response": null});
 
 });
 

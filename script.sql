@@ -15,8 +15,7 @@ USE `{{DATABASE}}`;
 CREATE TABLE IF NOT EXISTS `users` (
 	`ID` varchar(37) NOT NULL UNIQUE,
 	`enabled` bool DEFAULT FALSE,
-	`supportWorker` bool DEFAULT FALSE,
-	`admin` bool DEFAULT FALSE,
+	`userRole` INT DEFAULT 0,
 	`birthday` DATE NOT NULL,
 	`createTime` DATETIME DEFAULT NOW(),
 	`firstname` varchar(60) NOT NULL,
@@ -24,6 +23,8 @@ CREATE TABLE IF NOT EXISTS `users` (
 	`displayName` varchar(120) NOT NULL,
 	`phoneNumber` varchar(17) NOT NULL,
 	`email` varchar(256) NOT NULL UNIQUE,
+	`gender` INT DEFAULT 0,
+	`partOfCLC` bool default FALSE,
 	`recoveryQ1` TEXT NOT NULL,
 	`recoveryA1` TEXT NOT NULL,
 	`recoveryQ2` TEXT NOT NULL,
@@ -58,17 +59,17 @@ CREATE TABLE IF NOT EXISTS `drug` (
 CREATE TABLE IF NOT EXISTS `schedule` (
 	`ID` int NOT NULL AUTO_INCREMENT,
 	`client` varchar(37) NOT NULL,
-	`drug` int NOT NULL,
-	`doseUnit` int NOT NULL,
+	`drug` varchar(256) NOT NULL,
+	`doseUnit` varchar(60) NOT NULL,
 	`dose` FLOAT NOT NULL,
 	`createdByStaff` bool NOT NULL,
 	`enabled` bool NOT NULL,
 	`vacationUntil` DATE,
 	`createDate` DATETIME NOT NULL DEFAULT NOW(),
+	`startDate` DATE NOT NULL,
 	`endDate` DATE NOT NULL,
 	PRIMARY KEY (`ID`),
-	CONSTRAINT `schedule_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`),
-	CONSTRAINT `schedule_fk1` FOREIGN KEY (`drug`) REFERENCES `drug`(`ID`)
+	CONSTRAINT `schedule_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`)
 ) ENGINE=INNODB;
 
 
