@@ -1,24 +1,48 @@
 var express = require("express");
 var router = express.Router();
 
+/**
+ * This middleware functon will validate the users tokenID that was sent in the
+ * request header X-API-KEY field. It will validate with google that the user is
+ * valid. It will also check the users role and will set a supportWorker and
+ * isAdmin flag accordingly.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 var validate = function (req, res, next){
     var admin = req.app.get("admin");
     var tokenID = req.get("X-API-KEY");
 
     res.setHeader('Content-Type', 'application/json');
 
+    if (req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase()  && req.method !== 'GET') {
+        var err = new Error("Invalid content type. found \"" + req.get('content-type') + "\" excpected application/json.");
+        err.status = 400;
+        err.code = "invalid-content-type";
+        next(err);
+        return;
+    }
+
     if (tokenID === undefined) {
+
         var err = new Error("You need to authenticate yourself with the X-API-KEY header");
         err.status = 401;
         err.code = "auth/argument-missing";
         next(err);
+        return;
     }
 
+    // verify the users token with firebase authentication
     admin.auth().verifyIdToken(tokenID) .then(function(decodedToken) {
       var uid = decodedToken.uid;
+      console.log(decodedToken);
 
       req.uid = uid;
 
+      //check the database to get the users role
       res.locals.connection.query("SELECT userRole from users where ID = ? ",uid, function (error, results, fields) {
           if (error) {
 
@@ -28,6 +52,9 @@ var validate = function (req, res, next){
               err.error = error;
               next(err);
           }else if (results.length === 0) {
+
+              //if it gets here then the user has a firebase account but does not have
+              // an account in our database, this is bad
               var err = new Error("User does not exist, sign up for an account");
               err.status = 401;
               err.code = "auth/user-not-exists";
@@ -75,12 +102,26 @@ router.post("/", validate, function(req,res,next) {
     drug: req.body.drug_name,
     doseUnit: req.body.dose_units,
     dose: req.body.dose_quantity,
-    createdByStaff: req.body.created_by_staff || false, // need to verify staff identity, here
-    enabled: req.body.enabled || true,
-    vacationUntil: req.body.vacationUntil,
-    startDate: req.body.start_date,
-    endDate: req.body.end_date
-  }
+    createdByStaff: req.supportWorker || false,
+    enabled:  true,
+    startDate req.body.start_date || 'CURDATE()',
+    endDate: req.body.end_date || '9999-12-31',
+    notes: req.body.notes
+};
+
+var rawDoses = req.body.doses;
+var dosesToInsert = [];
+var dose = {};
+
+for (var i = 0; i < rawDoses.length; i++) {
+    dose.day = rawDoses[i].day;
+    dose.time = rawDoses[i].time;
+    dose.notificationTime = rawDoses[i].notification_offset;
+    dose.doseWindow = rawDoses[i].dose_window;
+}
+
+
+
   res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
     console.log(fields);
     console.log(results);
@@ -91,24 +132,36 @@ router.post("/", validate, function(req,res,next) {
        err.error = error;
        next(err);
      } else {
-       res.status(201);
-       res.send({"status": 200, "error": null, "response": results});
+
+         var scheduleID = results.insertId;
+
+         for (var i = 0; i < dosesToInsert.length; i++) {
+             dosesToInsert[i].scheduleID = scheduleID;
+         }
+
+         res.locals.connection.query("INSERT into dose set ?", dosesToInsert, function (error, results, fields) {
+           if (error) {
+              var err = new Error(error.sqlMessage);
+              err.status = 500;
+              err.code = error.error;
+              err.error = error;
+              next(err);
+            } else {
+
+                var scheduleID = results.insertId;
+
+                for (var i = 0; i < dosesToInsert.length; i++) {
+                    dosesToInsert[i].ID = scheduleID;
+                }
+
+
+              res.status(201);
+              res.send({"status": 201, "error": null, "response": results});
+            }
+         });
      }
   });
 });
 
-/* +--------+
-   | Update |
-   +--------+ */
-router.post("/update", validate, function(req,res,next) {
-  console.log("Update Schedule");
-});
-
-/* +--------+
-   | Delete |
-   +--------+ */
-router.delete("/", validate, function(req,res,next) {
-  console.log("Delete Schedule");
-});
 
 module.exports = router;
