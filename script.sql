@@ -66,12 +66,12 @@ CREATE TABLE IF NOT EXISTS `schedule` (
 	`enabled` bool NOT NULL,
 	`vacationUntil` DATE,
 	`createDate` DATETIME NOT NULL DEFAULT NOW(),
-	`startDate` DATE NOT NULL,
-	`endDate` DATE NOT NULL,
+	`startDate` DATE not null,
+	`endDate` DATE set default '9999-12-31',
+	`notes` TEXT,
 	PRIMARY KEY (`ID`),
 	CONSTRAINT `schedule_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`)
 ) ENGINE=INNODB;
-
 
 CREATE TABLE IF NOT EXISTS `dose` (
 	`scheduleID` int NOT NULL,
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `dose` (
 
 CREATE TABLE IF NOT EXISTS `schedulePermissions` (
 	`scheduleID` int NOT NULL,
-	`userID` varchar(37) NOT NULL,
+	`observerID` varchar(37) NOT NULL,
 	`clientID` varchar(37) NOT NULL,
 	`userAccepted` bool NOT NULL DEFAULT  FALSE,
 	`mandatory` bool NOT NULL DEFAULT FALSE,

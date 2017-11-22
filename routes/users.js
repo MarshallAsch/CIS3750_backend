@@ -19,7 +19,7 @@ var validate = function (req, res, next){
 
     res.setHeader('Content-Type', 'application/json');
 
-    if (req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase()  && req.method !== 'GET') {
+    if (req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase() && req.method !== 'GET') {
         var err = new Error("Invalid content type. found \"" + req.get('content-type') + "\" excpected application/json.");
         err.status = 400;
         err.code = "invalid-content-type";
@@ -39,8 +39,6 @@ var validate = function (req, res, next){
     // verify the users token with firebase authentication
     admin.auth().verifyIdToken(tokenID) .then(function(decodedToken) {
       var uid = decodedToken.uid;
-      console.log(decodedToken);
-
       req.uid = uid;
 
       //check the database to get the users role
@@ -62,23 +60,22 @@ var validate = function (req, res, next){
               next(err);
 
           } else {
-              if ((results[0].role & 0x10)  !== 0) {
-                  req.supportWorker  = true;
+              var userRole = results[0].userRole;
+              if ((userRole & 0b10) === 2) {
+                  req.supportWorker = true;
               }
               else {
                   req.supportWorker = false;
               }
 
-
-              if ((results[0].role & 0x100)  !== 0) {
-                  req.isAdmin  = true;
+              if ((userRole & 0b100) === 4) {
+                  req.isAdmin = true;
               }
               else {
                   req.isAdmin = false;
               }
 
               next();
-
           }
       });
     }).catch(function(error) {
@@ -540,7 +537,6 @@ router.patch("/", validate, function(req, res, next) {
     });
 });
 
-
 /**
  * This endpoint is used to get a single users data.
  * Depending on the user permissions a different set of results will be shown.
@@ -703,6 +699,132 @@ router.delete("/:userID", validate, function(req, res, next) {
     }
 
 });
+
+
+/*------------------------------------------------------
+** GET SCHEDULES ---------------------------------------
+**------------------------------------------------------*/
+/* +------+
+   | Read |
+   +------+ */
+router.get("/:userID/schedules", validate, function(req,res,next) {
+    res.setHeader("Content-Type", "application/json");
+
+    var userID = req.params.userID;
+    var uid = req.uid;
+
+    var limit = parseInt(req.query.limit, 10) || 20;
+    var offset = parseInt(req.query.offset, 10) || 0;
+
+    if (limit > 50) {
+        limit = 50;
+    } else if (limit < 1) {
+        limit = 1;
+    }
+
+    if(offset < 0) {
+        offset = 0;
+    }
+
+
+    if (uid == userID) {
+
+        // Process the request from the perspective of a client modifying their own schedule
+        q = "SELECT * from schedule where client = ?";
+        res.locals.connection.query(q, userID, function(error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            }else {
+                res.status(200);
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+            }
+        });
+    } else if (res.isSupportWorker) {
+        // Process the request only if the support worker has authority over the clients schedule
+        q1 = "SELECT client FROM clientMappings WHERE supportWorker = ? AND client = ?";
+        q2 = "SELECT * FROM schedule WHERE client = (" + q1 + ")";
+        res.locals.connection.query(q2, [uid, userID], function(error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            } else {
+                res.status(200);
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+            }
+        });
+    } else if (res.isAdmin) {
+        // Process the request immediately without question
+        q = "SELECT * from schedule where client = ?";
+        res.locals.connection.query(q, userID, function(error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            } else {
+                res.status(200);
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+            }
+        });
+    } else {
+
+    // Process the request as if one client wants to access another clients schedule */
+    q1 = "SELECT clientID FROM  schedulePermissions WHERE observerID = ? AND clientID = ?";
+    q2 = "SELECT * from schedule where client = (" + q1 + ")";
+    res.locals.connection.query(q2, [uid, userID], function(error, results, fields) {
+      if (error) {
+        var err = new Error(error.sqlMessage);
+        err.status = 500;
+        err.code = error.error;
+        err.error = error;
+        next(err);
+      } else {
+          res.status(200);
+          res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+      }
+    });
+    }
+});
+
+/*------------------------------------------------------
+** ASSIGN CLIENT 2 SUPPORT WORKER ----------------------
+**------------------------------------------------------*/
+router.post("/:clientID/assign/:swID", validate, function(req,res,next) {
+    res.setHeader("Content-Type", "application/json");
+    var clientID = req.params.clientID;
+    var swID = req.params.swID;
+
+    if(req.isAdmin) {
+        var q = "INSERT INTO clientMappings (client, supportWorker) VALUES (?,?) ";
+        res.locals.connection.query(q, [clientID, swID], function(error, results, fields) {
+
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+            } else {
+                res.status(200);
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+            }
+        });
+
+    } else {
+        var err = new Error("Permissions Error");
+        err.status = 403;
+        next(err);
+    }
+});
+
 
 
 module.exports = router;
