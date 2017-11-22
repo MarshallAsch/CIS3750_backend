@@ -73,7 +73,6 @@ CREATE TABLE IF NOT EXISTS `schedule` (
 	CONSTRAINT `schedule_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`)
 ) ENGINE=INNODB;
 
-
 CREATE TABLE IF NOT EXISTS `dose` (
 	`scheduleID` int NOT NULL,
 	`doseID` int NOT NULL AUTO_INCREMENT,

@@ -234,6 +234,8 @@ router.post("/", validate, function(req,res,next) {
 
 /*
   res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
+    console.log(fields);
+    console.log(results);
     if (error) {
        var err = new Error(error.sqlMessage);
        err.status = 500;
