@@ -740,7 +740,8 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
                 next(err);
             }else {
                 res.status(200);
-		//add dose schedule to results?
+		//add dose schedule to results
+		//get SQL query as an admin first
                 res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
             }
         });
