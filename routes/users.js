@@ -563,7 +563,7 @@ router.get("/:userID", validate, function(req, res, next) {
     var uid = req.uid;
 
     if (uid === userID) {
-        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email,recoveryQ1,recoveryA1,recoveryQ2,recoveryA2 from users where ID = ? ",userID, function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email,partOfCLC AS with_CLC,gender,recoveryQ1,recoveryA1,recoveryQ2,recoveryA2 from users where ID = ? ",userID, function (error, results, fields) {
             if (error) {
                 var err = new Error(error.sqlMessage);
                 err.status = 500;
@@ -572,7 +572,7 @@ router.get("/:userID", validate, function(req, res, next) {
                 next(err);
             }else {
                 res.status(200);
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results[0] || {}}));
             }
         });
     }
@@ -586,7 +586,7 @@ router.get("/:userID", validate, function(req, res, next) {
                 next(err);
             }else {
                 res.status(200);
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results[0] || {}}));
             }
         });
     }
@@ -601,7 +601,7 @@ router.get("/:userID", validate, function(req, res, next) {
                 next(err);
             }else {
                 res.status(200);
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results[0] || {}}));
             }
         });
     }
@@ -616,7 +616,7 @@ router.get("/:userID", validate, function(req, res, next) {
                 next(err);
             }else {
                 res.status(200);
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+                res.send(JSON.stringify({"status": 200, "error": null, "response": results[0] || {}}));
             }
         });
     }
