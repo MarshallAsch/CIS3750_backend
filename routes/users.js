@@ -1343,7 +1343,7 @@ router.delete("/:userID/schedules/:scheduleID", validate, function(req,res,next)
             }
 
             res.status(200);
-            res.send(JSON.stringify({"status": 200, "error": null, "response": results));
+            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
 
         });
     }
@@ -1360,7 +1360,7 @@ router.delete("/:userID/schedules/:scheduleID", validate, function(req,res,next)
             }
 
             res.status(200);
-            res.send(JSON.stringify({"status": 200, "error": null, "response": results));
+            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
         });
     }
     else {
@@ -1376,7 +1376,7 @@ router.delete("/:userID/schedules/:scheduleID", validate, function(req,res,next)
             }
 
             res.status(200);
-            res.send(JSON.stringify({"status": 200, "error": null, "response": results));
+            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
         });
     }
 
