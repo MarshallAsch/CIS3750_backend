@@ -98,9 +98,58 @@ router.get("/:supportWorker/clients", validate, function(req,res,next) {
     res.setHeader("Content-Type", "application/json");
     var supportWorker = req.params.supportWorker;
 
-    var err = new Error("Not yet implemented, this will get all of the clients that the support worker is responcible for.");
-    err.status = 501;
-    next(err);
+    var limit = parseInt(req.query.limit, 10) || 20;
+    var offset = parseInt(req.query.offset, 10) || 0;
+
+    if (limit > 50) {
+        limit = 50;
+    }
+    else if (limit < 1) {
+        limit = 1;
+    }
+
+    if (offset < 0) {
+        offset = 0;
+    }
+
+
+    if (req.isAdmin || req.uid === supportWorker) {
+
+        //can see your support workers, anyone who is observing you and anyone who you are observing
+        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users ID in (select client supportWorker from clientMappings where supportWorker = ? ) limit ?, ?", [supportWorker, offset, limit], function (error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+                return;
+            }
+
+            var users = results;
+
+            res.locals.connection.query("SELECT count(*) AS total supportWorker FROM clientMappings WHERE supportWorker = ?", supportWorker, function (error, results, fields) {
+                if (error) {
+
+                    var err = new Error(error.sqlMessage);
+                    err.status = 500;
+                    err.code = error.error;
+                    err.error = error;
+                    next(err);
+                }
+                else {
+                    res.status(200);
+                    res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+                }
+            });
+        });
+    }
+    else {
+        var err = new Error("You do not have permission to perform this action.");
+        err.status = 403;
+        err.code = "permission-denied";
+        next(err);
+    }
 });
 
 
@@ -129,8 +178,9 @@ router.post("/:supportWorker/users/:clientID", validate, function(req,res,next) 
         });
 
     } else {
-        var err = new Error("Permissions Error");
+        var err = new Error("You do not have permission to delete this user");
         err.status = 403;
+        err.code = "permission-denied";
         next(err);
     }
 });
@@ -157,8 +207,9 @@ router.delete("/:supportWorker/users/:clientID", validate, function(req,res,next
         });
 
     } else {
-        var err = new Error("Permissions Error");
+        var err = new Error("You do not have permission to delete this user");
         err.status = 403;
+        err.code = "permission-denied";
         next(err);
     }
 });

@@ -144,7 +144,7 @@ router.post("/", validate, function(req,res,next) {
       }
       res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
         if (error) {
-          return res.locals.connection.rollback(function() {
+          res.locals.connection.rollback(function() {
               var err = new Error(error.sqlMessage);
               err.status = 500;
               err.code = error.error;
@@ -152,8 +152,8 @@ router.post("/", validate, function(req,res,next) {
               console.log('rollback');
 
               next(err);
-            //throw error;
           });
+          return;
         }
 
         var scheduleID = results.insertId;
@@ -179,15 +179,16 @@ router.post("/", validate, function(req,res,next) {
         async.parallel(calls, function(error, result) {
 
             if (error) {
-                return res.locals.connection.rollback(function() {
+                res.locals.connection.rollback(function() {
                     console.log('rollback');
                     next(error);
                 });
+                return;
             }
             else {
                 res.locals.connection.commit(function(err1) {
                   if (err1) {
-                    return res.locals.connection.rollback(function() {
+                    res.locals.connection.rollback(function() {
                         console.log('rollback');
 
                         var err = new Error(err1.sqlMessage);
@@ -196,11 +197,13 @@ router.post("/", validate, function(req,res,next) {
                         err.error = err1;
                         next(err);
                     });
+                    return;
                   }
-
-                  console.log('success!');
-                  res.status(201);
-                  res.send({"status": 201, "error": null, "response": results});
+                  else {
+                      console.log('success!');
+                      res.status(201);
+                      res.send({"status": 201, "error": null, "response": results});
+                  }
                 });
             }
         })

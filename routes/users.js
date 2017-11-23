@@ -124,26 +124,28 @@ router.get("/", validate, function(req, res, next) {
     if (res.isAdmin) {
         res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users limit ?, ?", [offset, limit], function (error, results, fields) {
             if (error) {
-
                 var err = new Error(error.sqlMessage);
                 err.status = 500;
                 err.code = error.error;
                 err.error = error;
                 next(err);
+                return;
             }
 
             var users = results;
 
             res.locals.connection.query("SELECT count(*) AS total from users", function (error, results, fields) {
                 if (error) {
-
                     var err = new Error(error.sqlMessage);
                     err.status = 500;
                     err.code = error.error;
                     err.error = error;
                     next(err);
                 }
-                res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+                else {
+                    res.status(200);
+                    res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+                }
             });
         });
     }
@@ -158,6 +160,7 @@ router.get("/", validate, function(req, res, next) {
                 err.code = error.error;
                 err.error = error;
                 next(err);
+                return;
             }
 
             var users = results;
@@ -165,14 +168,16 @@ router.get("/", validate, function(req, res, next) {
             res.locals.connection.query("SELECT count(*) AS total from users where admin = true or supportWorker = true or ID in (select client from clientMappings where supportWorker = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, offset, limit], function (error, results, fields) {
 
                 if (error) {
-
                     var err = new Error(error.sqlMessage);
                     err.status = 500;
                     err.code = error.error;
                     err.error = error;
                     next(err);
                 }
-                res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+                else {
+                    res.status(200);
+                    res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+                }
             });
         });
     }
@@ -186,6 +191,7 @@ router.get("/", validate, function(req, res, next) {
                 err.code = error.error;
                 err.error = error;
                 next(err);
+                return;
             }
 
             var users = results;
@@ -193,14 +199,16 @@ router.get("/", validate, function(req, res, next) {
             res.locals.connection.query("SELECT count(*) AS total from users where ID = ? or ID in (select supportWorker from clientMappings where client = ? union select client from userPermissions where observer = ? union select observer from userPermissions where client = ?) limit ?, ?", [uid, uid, uid, uid, offset, limit], function (error, results, fields) {
 
                 if (error) {
-
                     var err = new Error(error.sqlMessage);
                     err.status = 500;
                     err.code = error.error;
                     err.error = error;
                     next(err);
                 }
-                res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+                else {
+                    res.status(200);
+                    res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+                }
             });
         });
     }
@@ -289,7 +297,7 @@ router.post("/", function(req, res, next) {
     }
 
 
-    if (req.body.with_CLC !== "TRUE") {
+    if (req.body.with_CLC.toUpperCase !== "TRUE") {
         req.body.with_CLC = true;
     }
     else if(req.body.with_CLC.toUpperCase() !== "FALSE" ) {
@@ -432,7 +440,7 @@ router.patch("/", validate, function(req, res, next) {
         return;
     }
 
-    if (req.body.with_CLC !== "TRUE") {
+    if (req.body.with_CLC.toUpperCase() !== "TRUE") {
         req.body.with_CLC = true;
     }
     else if(req.body.with_CLC.toUpperCase() !== "FALSE" ) {
@@ -499,6 +507,7 @@ router.patch("/", validate, function(req, res, next) {
         err.code = "bad-req";
         err.error = req.body;
         next(err);
+        return;
     }
 
     res.locals.connection.query("UPDATE users set ? where ID = ?",[sqlData, uid], function (error, results, fields) {
@@ -509,7 +518,6 @@ router.patch("/", validate, function(req, res, next) {
             err.error = error;
             next(err);
         } else {
-
 
             if (Object.keys(firebaseData).length !== 0) {
                 admin.auth().updateUser(uid, firebaseData)
@@ -563,6 +571,7 @@ router.get("/:userID", validate, function(req, res, next) {
                 err.error = error;
                 next(err);
             }else {
+                res.status(200);
                 res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
             }
         });
@@ -576,6 +585,7 @@ router.get("/:userID", validate, function(req, res, next) {
                 err.error = error;
                 next(err);
             }else {
+                res.status(200);
                 res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
             }
         });
@@ -590,6 +600,7 @@ router.get("/:userID", validate, function(req, res, next) {
                 err.error = error;
                 next(err);
             }else {
+                res.status(200);
                 res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
             }
         });
@@ -604,6 +615,7 @@ router.get("/:userID", validate, function(req, res, next) {
                 err.error = error;
                 next(err);
             }else {
+                res.status(200);
                 res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
             }
         });
@@ -630,11 +642,11 @@ router.delete("/:userID", validate, function(req, res, next) {
     var userID = req.params.userID
     var uid = req.uid;
 
-    if (userID === uid) {
+    if (req.isAdmin || userID === uid) {
 
-        //delete their own account
+        //admin can delete any account, and a user is able to delete their own account
         //deal with chained deletion
-        res.locals.connection.query("delete from users where ID = ?",[userID], function (error, results, fields) {
+        res.locals.connection.query("delete from users where ID = ?", userID, function (error, results, fields) {
             if (error) {
                 var err = new Error(error.sqlMessage);
                 err.status = 500;
@@ -652,37 +664,7 @@ router.delete("/:userID", validate, function(req, res, next) {
                     console.log("Error deleting user:", error);
 
                     var err = new Error(error.message);
-                    err.status = 401;
-                    err.code = error.code;
-                    err.error = error;
-                    next(err);
-                });
-            }
-        });
-    }
-    else if (req.isAdmin) {
-
-        //admin can delete any account
-        //deal with chained deletion
-        res.locals.connection.query("delete from users where ID = ?",[userID], function (error, results, fields) {
-            if (error) {
-                var err = new Error(error.sqlMessage);
-                err.status = 500;
-                err.code = error.error;
-                err.error = error;
-                next(err);
-            } else {
-                admin.auth().deleteUser(userID)
-                .then(function() {
-                    console.log("Successfully deleted user");
-                    res.status(200);
-                    res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
-                })
-                .catch(function(error) {
-                    console.log("Error deleting user:", error);
-
-                    var err = new Error(error.message);
-                    err.status = 401;
+                    err.status = 500;
                     err.code = error.code;
                     err.error = error;
                     next(err);
