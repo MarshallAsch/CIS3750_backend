@@ -116,7 +116,7 @@ router.get("/:supportWorker/clients", validate, function(req,res,next) {
     if (req.isAdmin || req.uid === supportWorker) {
 
         //can see your support workers, anyone who is observing you and anyone who you are observing
-        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users ID in (select client supportWorker from clientMappings where supportWorker = ? ) limit ?, ?", [supportWorker, offset, limit], function (error, results, fields) {
+        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID in (select client from clientMappings where supportWorker = ? ) limit ?, ?", [supportWorker, offset, limit], function (error, results, fields) {
             if (error) {
                 var err = new Error(error.sqlMessage);
                 err.status = 500;
@@ -128,7 +128,7 @@ router.get("/:supportWorker/clients", validate, function(req,res,next) {
 
             var users = results;
 
-            res.locals.connection.query("SELECT count(*) AS total supportWorker FROM clientMappings WHERE supportWorker = ?", supportWorker, function (error, results, fields) {
+            res.locals.connection.query("SELECT count(*) AS total FROM clientMappings WHERE supportWorker = ?", supportWorker, function (error, results, fields) {
                 if (error) {
 
                     var err = new Error(error.sqlMessage);

@@ -96,9 +96,17 @@ var validate = function (req, res, next){
     });
 };
 
-/* +--------+
-   | Create |
-   +--------+ */
+/**
+ * This endpoint is used to  create a new schedule for a the currently authenticated user.
+ * This is a convience function for POST /users/:userID/schedules
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.post("/", validate, function(req,res,next) {
 
     var curDate = mysql.raw('CURDATE()');
@@ -135,12 +143,18 @@ router.post("/", validate, function(req,res,next) {
     }
 
 
+    var createdBySupportWorker = false;
+
+    if (req.supportWorker && userID !== uid){
+        createdBySupportWorker = true;
+    }
+
     var data = {
         client: userID,
         drug: req.body.drug_name,
         doseUnit: req.body.dose_units,
         dose: req.body.dose_quantity,
-        createdByStaff: req.supportWorker || false,
+        createdByStaff: createdBySupportWorker,
         enabled:  true,
         startDate: req.body.start_date || curDate,
         endDate: req.body.end_date || '9999-12-31'
