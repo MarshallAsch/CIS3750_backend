@@ -58,6 +58,11 @@ app.use(function(req, res, next){
 });
 
 
+app.use(function(req, res, next) {
+    console.log(req);
+    next();
+});
+
 // define the data route handlers
 app.use("/", index);
 app.use("/v1/users", users);

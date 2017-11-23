@@ -41,7 +41,6 @@ var validate = function (req, res, next){
     // verify the users token with firebase authentication
     admin.auth().verifyIdToken(tokenID) .then(function(decodedToken) {
       var uid = decodedToken.uid;
-      console.log(decodedToken);
 
       req.uid = uid;
 
