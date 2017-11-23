@@ -278,5 +278,46 @@ router.post("/", validate, function(req,res,next) {
     });
 });
 
+/*------------------------------------------------------
+** DOSE TAKEN ------------------- ----------------------
+**------------------------------------------------------*/
+router.post("/:scheduleID/dose/:doseID", validate, function(req,res,next) {
+    res.setHeader("Content-Type", "application/json");
+    var scheduleID = req.params.scheduleID;
+    var doseID = req.params.doseID;
+    var status = req.body.status || 0;
+    var uid = req.uid;
+
+    var q = "SELECT COUNT(*) AS cnt FROM schedule WHERE client = ? AND ID = ?";
+    res.locals.connection.query(q, [uid, scheduleID], function(error, results, fields) {
+      if (error) {
+        var err = new Error(error.sqlMessage);
+        err.status = 500;
+        err.code = error.error;
+        err.error = error;
+        next(err);
+      } else {
+        if(results[0].cnt > 0) {
+          var q1 = "INSERT INTO doseTaken (scheduleID, doseID, time, status) VALUES (?,?,NOW(),?)";
+          res.locals.connection.query(q1,[scheduleID, doseID, status], function(error, results, fields) {
+            if (error) {
+              var err = new Error(error.sqlMessage);
+              err.status = 500;
+              err.code = error.error;
+              err.error = error;
+              next(err);
+            } else {
+              res.status(201);
+              res.send({"status": 201, "error": null, "response": results});
+            }
+          });
+        } else {
+          var err = new Error("You do not have permission to perform this task");
+          err.status = 500;
+          next(err);
+        }
+      }
+    });
+});
 
 module.exports = router;
