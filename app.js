@@ -11,6 +11,7 @@ var mysql = require("mysql");
 var index = require(__dirname + "/routes/index");
 var users = require(__dirname + "/routes/users");
 var schedules = require(__dirname + "/routes/schedules");
+var supportWorker = require(__dirname + "/routes/supportWorker");
 
 var app = express();
 
@@ -60,6 +61,8 @@ app.use(function(req, res, next){
 app.use("/", index);
 app.use("/v1/users", users);
 app.use("/v1/schedules", schedules);
+app.use("/v1/supportworker", supportWorker);
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
