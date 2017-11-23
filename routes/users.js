@@ -871,7 +871,8 @@ router.post("/:userID/schedules", validate, function(req,res,next) {
 
     var curDate = mysql.raw('CURDATE()');
 
-    var userID = req.uid;
+    var userID = req.params.userID;
+    var uid = req.uid;
 
     var dateFormat = /^[1-9][0-9]{3}\-(0[1-9]|1[12])\-(0[1-9]|[12][0-9]|3[01])$/;
     var timeFormat = /^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
@@ -923,7 +924,7 @@ router.post("/:userID/schedules", validate, function(req,res,next) {
         data.notes = req.body.notes
     }
 
-    var rawDoses = req.body.doses;
+    var rawDoses = req.body.doses || [];
     var dosesToInsert = [];
 
 

@@ -164,7 +164,7 @@ router.post("/", validate, function(req,res,next) {
         data.notes = req.body.notes
     }
 
-    var rawDoses = req.body.doses;
+    var rawDoses = req.body.doses || [];
     var dosesToInsert = [];
 
 
