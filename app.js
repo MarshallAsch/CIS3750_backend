@@ -59,7 +59,9 @@ app.use(function(req, res, next){
 
 
 app.use(function(req, res, next) {
-    console.log(req);
+    console.log(req.headers);
+    console.log(req.body);
+
     next();
 });
 
