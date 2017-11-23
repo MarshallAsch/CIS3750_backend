@@ -731,6 +731,9 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
 
         // Process the request from the perspective of a client modifying their own schedule
         q = "SELECT * from schedule where client = ?";
+//	qd = "select dose.* from dose inner join schedule on dose.scheduleID = schedule.ID where schedule.client = ?";
+
+// "SELECT day, time, notificationTime, doseWindow FROM dose WHERE dose.scheduleID = ?";
         res.locals.connection.query(q, userID, function(error, results, fields) {
             if (error) {
                 var err = new Error(error.sqlMessage);
@@ -738,8 +741,19 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
                 err.code = error.error;
                 err.error = error;
                 next(err);
-            }else {
-                res.status(200);
+            } else {
+		console.log(fields);
+		/*res.locals.connection.query(qd, userID, function(error, results, fields) {
+		if (error){
+			console.log(results);
+			var err2 = new Error(error.sqlMessage);
+			err2.status = 500;
+			err2.code = error.error;
+			err2.error = error;
+			next(err2);
+		}
+		});*/
+		res.status(200);
 		//add dose schedule to results
 		//get SQL query as an admin first
                 res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
