@@ -278,15 +278,33 @@ router.post("/", validate, function(req,res,next) {
     });
 });
 
-/*------------------------------------------------------
-** DOSE TAKEN ------------------- ----------------------
-**------------------------------------------------------*/
+/**
+ * This endpoint is used to create a new dose entry.
+ * 
+ * The user does not need to be authenticated to use this endpoint.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.post("/:scheduleID/dose/:doseID", validate, function(req,res,next) {
+
+    var now = mysql.raw('NOW()');
+
     res.setHeader("Content-Type", "application/json");
-    var scheduleID = req.params.scheduleID;
-    var doseID = req.params.doseID;
-    var status = req.body.status || 0;
     var uid = req.uid;
+
+
+    // add data validation
+
+    var doseTaken =
+    {
+        scheduleID: req.params.scheduleID,
+        doseID:     req.params.doseID,
+        time:       req.body.status || 0,
+        status:     req.body.time || now,
+    };
 
     var q = "SELECT COUNT(*) AS cnt FROM schedule WHERE client = ? AND ID = ?";
     res.locals.connection.query(q, [uid, scheduleID], function(error, results, fields) {
@@ -298,8 +316,8 @@ router.post("/:scheduleID/dose/:doseID", validate, function(req,res,next) {
         next(err);
       } else {
         if(results[0].cnt > 0) {
-          var q1 = "INSERT INTO doseTaken (scheduleID, doseID, time, status) VALUES (?,?,NOW(),?)";
-          res.locals.connection.query(q1,[scheduleID, doseID, status], function(error, results, fields) {
+          var q1 = "INSERT INTO doseTaken set ?";
+          res.locals.connection.query(q1, doseTaken, function(error, results, fields) {
             if (error) {
               var err = new Error(error.sqlMessage);
               err.status = 500;
@@ -312,9 +330,10 @@ router.post("/:scheduleID/dose/:doseID", validate, function(req,res,next) {
             }
           });
         } else {
-          var err = new Error("You do not have permission to perform this task");
-          err.status = 500;
-          next(err);
+            var err = new Error("You do not have permission to perform this action");
+            err.status = 403;
+            err.code = "permission-denied";
+            next(err);
         }
       }
     });
