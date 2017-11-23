@@ -252,7 +252,14 @@ router.post("/", function(req, res, next) {
         invalidFields.email = "email is invalid \"" + req.body.email + "\"";
     }
 
-    if (req.body.with_CLC !== undefined && (req.body.with_CLC.toUpperCase() !== "TRUE" && req.body.with_CLC.toUpperCase() !== "FALSE" )) {
+
+    if (req.body.with_CLC === undefined || req.body.with_CLC.toUpperCase() === "FALSE") {
+        req.body.with_CLC = false;
+    }
+    else if (req.body.with_CLC.toUpperCase() === "TRUE") {
+        req.body.with_CLC = true;
+    }
+    else {
         invalidFields.with_CLC = "with_CLC is invalid \"" + req.body.with_CLC + "\"";
     }
 
@@ -298,13 +305,6 @@ router.post("/", function(req, res, next) {
     }
 
 
-    if (req.body.with_CLC.toUpperCase !== "TRUE") {
-        req.body.with_CLC = true;
-    }
-    else if(req.body.with_CLC.toUpperCase() !== "FALSE" ) {
-        req.body.with_CLC = false;
-    }
-
     // load the sent data into the struct to put into the database
     var data =
     {
@@ -313,7 +313,7 @@ router.post("/", function(req, res, next) {
         birthday:       req.body.birthday,
         email:          req.body.email,
         gender:         req.body.gender || 0,
-        partOfCLC:      req.body.with_CLC || false,
+        partOfCLC:      req.body.with_CLC,
         enabled:        true,
         displayName:    req.body.display_name || (req.body.first_name + " " + req.body.last_name),
         phoneNumber:    req.body.phone_number,
@@ -348,7 +348,7 @@ router.post("/", function(req, res, next) {
                 next(err);
             } else {
                 res.status(201);
-                res.send({"status": 200, "error": null, "response": results});
+                res.send({"status": 201, "error": null, "response": results});
             }
         });
     })
@@ -383,51 +383,83 @@ router.patch("/", validate, function(req, res, next) {
 
 
     var invalidFields = {};
+    var firebaseData = {};
+    var sqlData = {};
 
     if (req.body.first_name !== undefined && req.body.first_name.length >= 60) {
         invalidFields.first_name = "first_name is invalid \"" + req.body.first_name + "\"";
     }
+    else {
+        sqlData.firstname = req.body.first_name;
+    }
 
     if (req.body.last_name !== undefined && req.body.last_name.length >= 60) {
         invalidFields.last_name = "last_name is invalid \"" + req.body.last_name + "\"";
+    } else {
+        sqlData.lastname = req.body.last_name;
     }
 
     if (req.body.gender !== undefined && (req.body.gender > 3 || req.body.gender < 0)) {
         invalidFields.gender = "gender is invalid \"" + req.body.gender + "\"";
+    } else if  (req.body.gender !== undefined) {
+        sqlData.gender = req.body.gender;
     }
 
     if (req.body.email !== undefined && req.body.email.length >= 60) {
         invalidFields.email = "email is invalid \"" + req.body.email + "\"";
+    } else {
+        sqlData.email = req.body.email;
+        firebaseData.email = req.body.email;
     }
 
-    if (req.body.with_CLC !== undefined && (req.body.with_CLC.toUpperCase() !== "TRUE" && req.body.with_CLC.toUpperCase() !== "FALSE" )) {
+    if (req.body.with_CLC === undefined || req.body.with_CLC.toUpperCase() === "FALSE") {
+        sqlData.partOfCLC = false;
+    }
+    else if (req.body.with_CLC.toUpperCase() === "TRUE") {
+        sqlData.partOfCLC = true;
+    }
+    else {
         invalidFields.with_CLC = "with_CLC is invalid \"" + req.body.with_CLC + "\"";
     }
 
     if (req.body.display_name !== undefined && req.body.display_name.length >= 120) {
         invalidFields.display_name = "display_name is invalid \"" + req.body.display_name + "\"";
+    } else if (req.body.display_name !== undefined) {
+        sqlData.displayName = req.body.display_name;
     }
+
 
     var phoneFormat = /^\([0-9]{3}\)[0-9]{3}-[0-9]{4}$/;
 
     if (req.body.phone_number !== undefined && phoneFormat.test(req.body.phone_number) === false) {
         invalidFields.phone_number = "phone_number is invalid \"" + req.body.phone_number + "\"";
     }
+    else if (req.body.phone_number !== undefined) {
+        sqlData.phoneNumber = req.body.phone_number;
+    }
 
     if (req.body.recovery_q1 !== undefined && (req.body.recovery_q1.length === 0 || req.body.recovery_q1.length >= 250)) {
         invalidFields.recovery_q1 = "recovery_q1 is invalid \"" + req.body.recovery_q1 + "\"";
+    } else if (req.body.recovery_q1 !== undefined) {
+        sqlData.recoveryQ1 = req.body.recovery_q1;
     }
 
     if (req.body.recovery_a1 !== undefined && (req.body.recovery_a1.length === 0 || req.body.recovery_a1.length >= 250)) {
         invalidFields.recovery_a1 = "recovery_a1 is invalid \"" + req.body.recovery_a1 + "\"";
+    } else if (req.body.recovery_a1 !== undefined) {
+        sqlData.recoveryQ1 = req.body.recovery_a1;
     }
 
     if (req.body.recovery_q2 !== undefined && (req.body.recovery_q2.length === 0 || req.body.recovery_q2.length >= 250)) {
         invalidFields.recovery_q2 = "recovery_q2 is invalid \"" + req.body.recovery_q2 + "\"";
+    } else if (req.body.recovery_q2 !== undefined) {
+        sqlData.recoveryQ1 = req.body.recovery_q2;
     }
 
     if (req.body.recovery_a2 !== undefined && (req.body.recovery_a2.length === 0 || req.body.recovery_a2.length >= 250)) {
         invalidFields.recovery_a2 = "recovery_a2 is invalid \"" + req.body.recovery_a2 + "\"";
+    } else if (req.body.recovery_a2 !== undefined) {
+        sqlData.recoveryQ1 = req.body.recovery_a2;
     }
 
     //make sure that at least 1 field is being updated
@@ -441,62 +473,9 @@ router.patch("/", validate, function(req, res, next) {
         return;
     }
 
-    if (req.body.with_CLC.toUpperCase() !== "TRUE") {
-        req.body.with_CLC = true;
-    }
-    else if(req.body.with_CLC.toUpperCase() !== "FALSE" ) {
-        req.body.with_CLC = false;
-    }
-
-    var firebaseData = {};
-    var sqlData = {};
-    if (req.body.first_name !== undefined) {
-        sqlData.firstname = req.body.first_name;
-    }
-
-    if (req.body.last_name !== undefined) {
-        sqlData.lastname = req.body.last_name;
-    }
-
-    if (req.body.email !== undefined) {
-        sqlData.email = req.body.email;
-        firebaseData.email = req.body.email;
-    }
 
     if (req.body.birthday !== undefined) {
         sqlData.birthday = req.body.birthday;
-    }
-
-    if (req.body.display_name !== undefined) {
-        sqlData.displayName = req.body.display_name;
-    }
-
-    if (req.body.phone_number !== undefined) {
-        sqlData.phoneNumber = req.body.phone_number;
-    }
-
-    if (req.body.gender !== undefined) {
-        sqlData.gender = req.body.gender;
-    }
-
-    if (req.body.with_CLC !== undefined) {
-        sqlData.partOfCLC = req.body.with_CLC;
-    }
-
-    if (req.body.recovery_q1 !== undefined) {
-        sqlData.recoveryQ1 = req.body.recovery_q1;
-    }
-
-    if (req.body.recovery_a1 !== undefined) {
-        sqlData.recoveryA1 = req.body.recovery_a1;
-    }
-
-    if (req.body.recovery_q2 !== undefined) {
-        sqlData.recoveryQ2 = req.body.recovery_q2;
-    }
-
-    if (req.body.recovery_a1 !== undefined) {
-        sqlData.recoveryA2 = req.body.recovery_a1;
     }
 
 
@@ -683,13 +662,17 @@ router.delete("/:userID", validate, function(req, res, next) {
 
 });
 
-
-/*------------------------------------------------------
-** GET SCHEDULES ---------------------------------------
-**------------------------------------------------------*/
-/* +------+
-   | Read |
-   +------+ */
+/**
+ * This endpoint is used to get all of the schedules for a specific user.
+ * Depending on the user permissions a different set of results will be shown.
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.get("/:userID/schedules", validate, function(req,res,next) {
     res.setHeader("Content-Type", "application/json");
 
@@ -851,7 +834,326 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
     });
 });
 
+/**
+ * This endpoint is used to  create a new schedule for a the currently authenticated user.
+ * Depending on who you are logged in as you may not be able to create a schedule
+ * for a different user
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
+router.post("/:userID/schedules", validate, function(req,res,next) {
 
+    var curDate = mysql.raw('CURDATE()');
+
+    var userID = req.params.userID;
+    var uid = req.uid;
+
+    var dateFormat = /^[1-9][0-9]{3}\-(0[1-9]|1[12])\-(0[1-9]|[12][0-9]|3[01])$/;
+    var timeFormat = /^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+    var notificationFormat = /^-0[0123]:[0-5][0-9]:[0-5][0-9]$/;
+    var windowFormat = /^0[01234]:[0-5][0-9]:[0-5][0-9]$/;
+
+
+    var invalidFields = {};
+
+    if (req.body.drug_name === undefined || req.body.drug_name.length >= 256) {
+        invalidFields.drug_name = "drug_name is invalid \"" + req.body.drug_name + "\"";
+    }
+
+    if (req.body.dose_units === undefined || req.body.dose_units.length >= 60) {
+        invalidFields.dose_units = "dose_units is invalid \"" + req.body.dose_units + "\"";
+    }
+
+    if (req.body.dose_quantity === undefined || req.body.dose_quantity <= 0) {
+        invalidFields.dose_quantity = "dose_quantity is invalid \"" + req.body.dose_quantity + "\"";
+    }
+
+    if (req.body.start_date !== undefined && dateFormat.test(req.body.start_date) === false) {
+        invalidFields.start_date = "start_date is invalid \"" + req.body.start_date + "\"";
+    }
+
+    if (req.body.end_date !== undefined && dateFormat.test(req.body.end_date) === false) {
+        invalidFields.end_date = "end_date is invalid \"" + req.body.end_date + "\"";
+    }
+
+
+    var createdBySupportWorker = false;
+
+    if (req.supportWorker && userID !== uid){
+        createdBySupportWorker = true;
+    }
+
+    var data = {
+        client: userID,
+        drug: req.body.drug_name,
+        doseUnit: req.body.dose_units,
+        dose: req.body.dose_quantity,
+        createdByStaff: createdBySupportWorker,
+        enabled:  true,
+        startDate: req.body.start_date || curDate,
+        endDate: req.body.end_date || '9999-12-31'
+    };
+
+    if (req.body.notes !== undefined) {
+        data.notes = req.body.notes
+    }
+
+    var rawDoses = req.body.doses || [];
+    var dosesToInsert = [];
+
+
+
+    if (Object.keys(invalidFields).length !== 0)
+    {
+        invalidFields.dose_quantity = [];
+        invalidFields.time = [];
+        invalidFields.notification_offset = [];
+        invalidFields.dose_window = [];
+    }
+
+    for (var i = 0; i < rawDoses.length; i++) {
+        var dose = {};
+
+        if (rawDoses[i].day === undefined || rawDoses[i].day < 0 || rawDoses[i].day > 6) {
+            invalidFields.dose_quantity.push("dose.day is invalid \"" + rawDoses[i].day + "\"");
+        }
+        if (rawDoses[i].time === undefined || timeFormat.test(rawDoses[i].time) === false) {
+            invalidFields.time.push("dose.time is invalid \"" + rawDoses[i].time + "\"");
+        }
+        if (rawDoses[i].notification_offset !== undefined && (notificationFormat.test(rawDoses[i].notification_offset) === false)) {
+            invalidFields.notification_offset.push("dose.notification_offset is invalid \"" + rawDoses[i].notification_offset + "\"");
+        }
+        if (rawDoses[i].dose_window !== undefined && (windowFormat.test(rawDoses[i].dose_window) === false)) {
+            invalidFields.dose_window.push("dose.dose_window is invalid \"" + rawDoses[i].dose_window + "\"");
+        }
+
+        dose.day = rawDoses[i].day;
+        dose.time = rawDoses[i].time;
+        dose.notificationTime = rawDoses[i].notification_offset || "-00:15:00";
+        dose.doseWindow = rawDoses[i].dose_window || "01:00:00";
+        dosesToInsert.push(dose);
+    }
+
+    //make sure that at least 1 field is being updated
+    if (Object.keys(invalidFields).length !== 0)
+    {
+        var err = new Error("Invalid fields given");
+        err.status = 400;
+        err.code = "bad-req";
+        err.error = invalidFields;
+        next(err);
+        return;
+    }
+
+
+    if (userID === uid || req.isAdmin) {
+        res.locals.connection.beginTransaction(function(err) {
+          if (err) {
+              var err = new Error(error.sqlMessage);
+              err.status = 500;
+              err.code = error.error;
+              err.error = error;
+              console.log('error');
+
+              next(err);
+              return;
+          }
+          res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
+            if (error) {
+              res.locals.connection.rollback(function() {
+                  var err = new Error(error.sqlMessage);
+                  err.status = 500;
+                  err.code = error.error;
+                  err.error = error;
+                  console.log('rollback');
+
+                  next(err);
+              });
+              return;
+            }
+
+            var scheduleID = results.insertId;
+            var calls = [];
+
+            dosesToInsert.forEach(function(dose) {
+                calls.push(function(callback){
+
+                    dose.scheduleID = scheduleID;
+
+                    res.locals.connection.query("INSERT into dose set ?", dose, function (error, results, fields) {
+                      if (error) {
+                          callback(error, results);
+                      }
+                      else {
+                          console.log("success drug " + results.insertId);
+                          callback(error, results);
+                      }
+                    });
+                })
+            });
+
+            async.parallel(calls, function(error, result) {
+
+                if (error) {
+                    res.locals.connection.rollback(function() {
+                        console.log('rollback');
+                        next(error);
+                    });
+                    return;
+                }
+                else {
+                    res.locals.connection.commit(function(err1) {
+                      if (err1) {
+                        res.locals.connection.rollback(function() {
+                            console.log('rollback');
+
+                            var err = new Error(err1.sqlMessage);
+                            err.status = 500;
+                            err.code = err1.error;
+                            err.error = err1;
+                            next(err);
+                        });
+                        return;
+                      }
+                      else {
+                          console.log('success!');
+                          res.status(201);
+                          res.send({"status": 201, "error": null, "response": results});
+                      }
+                    });
+                }
+            });
+
+          });
+        });
+    }
+    else if (req.isSupportWorker) {
+
+        //can see your support workers, anyone who is observing you and anyone who you are observing
+        res.locals.connection.query("select count(*) as total from clientMappings where client = ? and supportWorker = ?", [userID, uid], function (error, results, fields) {
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+                return;
+            }
+
+            if (results.length === 0) {
+                var err = new Error("You do not have permission to perform this action.");
+                err.status = 403;
+                err.code = "permission-denied";
+                next(err);
+                return;
+            }
+
+            res.locals.connection.beginTransaction(function(err) {
+              if (err) {
+                  var err = new Error(error.sqlMessage);
+                  err.status = 500;
+                  err.code = error.error;
+                  err.error = error;
+                  console.log('error');
+
+                  next(err);
+                  return;
+              }
+              res.locals.connection.query("INSERT into schedule set ?", data, function (error, results, fields) {
+                if (error) {
+                  res.locals.connection.rollback(function() {
+                      var err = new Error(error.sqlMessage);
+                      err.status = 500;
+                      err.code = error.error;
+                      err.error = error;
+                      console.log('rollback');
+
+                      next(err);
+                  });
+                  return;
+                }
+
+                var scheduleID = results.insertId;
+                var calls = [];
+
+                dosesToInsert.forEach(function(dose) {
+                    calls.push(function(callback){
+
+                        dose.scheduleID = scheduleID;
+
+                        res.locals.connection.query("INSERT into dose set ?", dose, function (error, results, fields) {
+                          if (error) {
+                              callback(error, results);
+                          }
+                          else {
+                              console.log("success drug " + results.insertId);
+                              callback(error, results);
+                          }
+                        });
+                    })
+                });
+
+                async.parallel(calls, function(error, result) {
+
+                    if (error) {
+                        res.locals.connection.rollback(function() {
+                            console.log('rollback');
+                            next(error);
+                        });
+                        return;
+                    }
+                    else {
+                        res.locals.connection.commit(function(err1) {
+                          if (err1) {
+                            res.locals.connection.rollback(function() {
+                                console.log('rollback');
+
+                                var err = new Error(err1.sqlMessage);
+                                err.status = 500;
+                                err.code = err1.error;
+                                err.error = err1;
+                                next(err);
+                            });
+                            return;
+                          }
+                          else {
+                              console.log('success!');
+                              res.status(201);
+                              res.send({"status": 201, "error": null, "response": results});
+                          }
+                        });
+                    }
+                });
+
+              });
+            });
+        });
+    }
+    else {
+        var err = new Error("You do not have permission to perform this action.");
+        err.status = 403;
+        err.code = "permission-denied";
+        next(err);
+        return;
+    }
+});
+
+/**
+ * This endpoint is used to get a specific schedule for a specific user.
+ * Depending on the user permissions a different set of results will be shown.
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.get("/:userID/schedules/:scheduleID", validate, function(req,res,next) {
     res.setHeader("Content-Type", "application/json");
 
@@ -860,27 +1162,146 @@ router.get("/:userID/schedules/:scheduleID", validate, function(req,res,next) {
 
     var uid = req.uid;
 
-    var limit = parseInt(req.query.limit, 10) || 20;
-    var offset = parseInt(req.query.offset, 10) || 0;
+    if (uid === userID || req.isAdmin) {
+        res.locals.connection.query('SELECT ID,drug,doseUnit,dose,createdByStaff,enabled,vacationUntil,createDate,startDate,endDate,notes FROM schedule where ID = ? AND client=?', [scheduleID, userID], function (error, results, fields) {
 
-    if (limit > 50) {
-        limit = 50;
-    } else if (limit < 1) {
-        limit = 1;
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+                return;
+            }
+
+            //if the schedule could not be found then return empty result
+            if (results.length === 0) {
+
+                res.status(200);
+                res.send(JSON.stringify({"status": 200, "error": null, "response": {}}));
+                return;
+            }
+
+            var schedule = results[0];
+
+
+            res.locals.connection.query('SELECT doseID,day,time,notificationTime,doseWindow FROM dose where scheduleID=?', schedule.ID, function (error, results, fields) {
+
+                if (error) {
+                    var err = new Error(error.sqlMessage);
+                    err.status = 500;
+                    err.code = error.error;
+                    err.error = error;
+                    next(err);
+                }
+                else {
+                    schedule.doses = results;
+
+                    res.status(200);
+                    res.send(JSON.stringify({"status": 200, "error": null, "response": schedule}));
+                }
+            });
+
+        });
     }
+    else if (req.supportWorker) {
+        res.locals.connection.query('SELECT ID,drug,doseUnit,dose,createdByStaff,enabled,vacationUntil,createDate,startDate,endDate,notes FROM schedule where ID = ? AND client in (SELECT client FROM clientMappings WHERE supportWorker = ? AND client = ?) OR (client = ? and ID in (select scheduleID from schedulePermissions where clientID = ? and observerID = ? and (userAccepted = true or mandatory = true)))', [scheduleID, uid, userID, userID, userID, uid], function (error, results, fields) {
 
-    if(offset < 0) {
-        offset = 0;
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+                return;
+            }
+
+            //if the schedule could not be found then return empty result
+            if (results.length === 0) {
+
+                res.status(200);
+                res.send(JSON.stringify({"status": 200, "error": null, "response": {}}));
+                return;
+            }
+
+            var schedule = results[0];
+
+
+            res.locals.connection.query('SELECT doseID,day,time,notificationTime,doseWindow FROM dose where scheduleID=?', schedule.ID, function (error, results, fields) {
+
+                if (error) {
+                    var err = new Error(error.sqlMessage);
+                    err.status = 500;
+                    err.code = error.error;
+                    err.error = error;
+                    next(err);
+                }
+                else {
+                    schedule.doses = results;
+
+                    res.status(200);
+                    res.send(JSON.stringify({"status": 200, "error": null, "response": schedule}));
+                }
+            });
+
+        });
+
     }
+    else {
+        res.locals.connection.query('SELECT ID,drug,doseUnit,dose,createdByStaff,enabled,vacationUntil,createDate,startDate,endDate,notes FROM schedule where scheduleID = ? AND client = ? and ID in (select scheduleID from schedulePermissions where clientID = ? and observerID = ? and (userAccepted = true or mandatory = true))', [scheduleID, userID, userID, uid], function (error, results, fields) {
+
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+                return;
+            }
+
+            //if the schedule could not be found then return empty result
+            if (results.length === 0) {
+
+                res.status(200);
+                res.send(JSON.stringify({"status": 200, "error": null, "response": {}}));
+                return;
+            }
+
+            var schedule = results[0];
 
 
-    var err = new Error("Not yet implemented, this will get a specific schedule for a user.");
-    err.status = 501;
-    next(err);
+            res.locals.connection.query('SELECT doseID,day,time,notificationTime,doseWindow FROM dose where scheduleID=?', schedule.ID, function (error, results, fields) {
 
+                if (error) {
+                    var err = new Error(error.sqlMessage);
+                    err.status = 500;
+                    err.code = error.error;
+                    err.error = error;
+                    next(err);
+                }
+                else {
+                    schedule.doses = results;
+
+                    res.status(200);
+                    res.send(JSON.stringify({"status": 200, "error": null, "response": schedule}));
+                }
+            });
+        });
+    }
 });
 
-
+/**
+ * This endpoint is used to  delete a  schedule for a specific user.
+ * The schedule is not actually deleted rather it is only marked as disabled so that
+ * when you want to get the doses taken later you can still see the the past doses.
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.delete("/:userID/schedules/:scheduleID", validate, function(req,res,next) {
     res.setHeader("Content-Type", "application/json");
 
@@ -889,10 +1310,55 @@ router.delete("/:userID/schedules/:scheduleID", validate, function(req,res,next)
 
     var uid = req.uid;
 
+    if (uid === userID || req.isAdmin) {
+        res.locals.connection.query('SELECT UPDATE schedule set enabled = false, endDate = CURDATE() where ID = ? AND client=?', [scheduleID, userID], function (error, results, fields) {
 
-    var err = new Error("Not yet implemented, this will delete a specific schedule for a user.");
-    err.status = 501;
-    next(err);
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+                return;
+            }
+
+            res.status(200);
+            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+
+        });
+    }
+    else if (req.supportWorker) {
+        res.locals.connection.query('UPDATE schedule set enabled = false, endDate = CURDATE() where ID = ? AND client in (SELECT client FROM clientMappings WHERE supportWorker = ? AND client = ?) OR (client = ? and ID in (select scheduleID from schedulePermissions where clientID = ? and observerID = ? and (userAccepted = true or mandatory = true)))', [scheduleID, uid, userID, userID, userID, uid], function (error, results, fields) {
+
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+                return;
+            }
+
+            res.status(200);
+            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+        });
+    }
+    else {
+        res.locals.connection.query('UPDATE schedule set enabled = false, endDate = CURDATE() where scheduleID = ? AND client = ? and ID in (select scheduleID from schedulePermissions where clientID = ? and observerID = ? and (userAccepted = true or mandatory = true))', [scheduleID, userID, userID, uid], function (error, results, fields) {
+
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+                next(err);
+                return;
+            }
+
+            res.status(200);
+            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+        });
+    }
 
 });
 
