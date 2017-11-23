@@ -298,10 +298,10 @@ router.post("/", function(req, res, next) {
     }
 
 
-    if (req.body.with_CLC.toUpperCase !== "TRUE") {
+    if (req.body.with_CLC.toUpperCase() === "TRUE") {
         req.body.with_CLC = true;
     }
-    else if(req.body.with_CLC.toUpperCase() !== "FALSE" ) {
+    else {
         req.body.with_CLC = false;
     }
 
@@ -313,7 +313,7 @@ router.post("/", function(req, res, next) {
         birthday:       req.body.birthday,
         email:          req.body.email,
         gender:         req.body.gender || 0,
-        partOfCLC:      req.body.with_CLC || false,
+        partOfCLC:      req.body.with_CLC,
         enabled:        true,
         displayName:    req.body.display_name || (req.body.first_name + " " + req.body.last_name),
         phoneNumber:    req.body.phone_number,
