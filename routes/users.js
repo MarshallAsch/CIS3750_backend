@@ -426,6 +426,7 @@ router.patch("/", validate, function(req, res, next) {
         invalidFields.display_name = "display_name is invalid \"" + req.body.display_name + "\"";
     } else if (req.body.display_name !== undefined) {
         sqlData.displayName = req.body.display_name;
+        firebaseData.displayName = req.body.display_name;
     }
 
 
@@ -476,6 +477,10 @@ router.patch("/", validate, function(req, res, next) {
 
     if (req.body.birthday !== undefined) {
         sqlData.birthday = req.body.birthday;
+    }
+
+    if (req.body.password !== undefined) {
+        firebaseData.password = req.body.password;
     }
 
 
