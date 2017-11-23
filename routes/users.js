@@ -1394,7 +1394,7 @@ router.get("/:userID/observers", validate, function(req,res,next) {
         offset = 0;
     }
 
-    if (req.isAdmin || req.uid === supportWorker) {
+    if (req.isAdmin || req.uid === userID) {
 
         //can see your support workers, anyone who is observing you and anyone who you are observing
         res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID in (select observer from userPermissions where client = ?) limit ?, ?", [userID, offset, limit], function (error, results, fields) {
