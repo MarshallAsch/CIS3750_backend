@@ -61,7 +61,7 @@ app.use(function(req, res, next){
 app.use("/", index);
 app.use("/v1/users", users);
 app.use("/v1/schedules", schedules);
-app.use("/v1/supportworker", supportWorker);
+app.use("/v1/supportworkers", supportWorker);
 
 
 // catch 404 and forward to error handler

@@ -19,10 +19,6 @@ var validate = function (req, res, next){
 
     res.setHeader('Content-Type', 'application/json');
 
-    console.log(req.get('content-type'));
-    console.log(req.is('application/json'));
-
-
     if ((req.get('content-type') === undefined || req.get('content-type').toUpperCase() !== 'application/json'.toUpperCase()) && req.method !== 'GET') {
         var err = new Error("Invalid content type. found \"" + req.get('content-type') + "\" excpected application/json.");
         err.status = 400;
@@ -797,5 +793,51 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
     });
     }
 });
+
+
+router.get("/:userID/schedules/:scheduleID", validate, function(req,res,next) {
+    res.setHeader("Content-Type", "application/json");
+
+    var userID = req.params.userID;
+    var scheduleID = req.params.scheduleID;
+
+    var uid = req.uid;
+
+    var limit = parseInt(req.query.limit, 10) || 20;
+    var offset = parseInt(req.query.offset, 10) || 0;
+
+    if (limit > 50) {
+        limit = 50;
+    } else if (limit < 1) {
+        limit = 1;
+    }
+
+    if(offset < 0) {
+        offset = 0;
+    }
+
+
+    var err = new Error("Not yet implemented, this will get a specific schedule for a user.");
+    err.status = 501;
+    next(err);
+
+});
+
+
+router.delete("/:userID/schedules/:scheduleID", validate, function(req,res,next) {
+    res.setHeader("Content-Type", "application/json");
+
+    var userID = req.params.userID;
+    var scheduleID = req.params.scheduleID;
+
+    var uid = req.uid;
+
+
+    var err = new Error("Not yet implemented, this will delete a specific schedule for a user.");
+    err.status = 501;
+    next(err);
+
+});
+
 
 module.exports = router;
