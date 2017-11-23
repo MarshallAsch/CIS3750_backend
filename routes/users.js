@@ -252,10 +252,11 @@ router.post("/", function(req, res, next) {
         invalidFields.email = "email is invalid \"" + req.body.email + "\"";
     }
 
+
     if (req.body.with_CLC === undefined || req.body.with_CLC.toUpperCase() === "FALSE") {
         req.body.with_CLC = false;
     }
-    if (req.body.with_CLC.toUpperCase() === "TRUE") {
+    else if (req.body.with_CLC.toUpperCase() === "TRUE") {
         req.body.with_CLC = true;
     }
     else {
