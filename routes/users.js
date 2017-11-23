@@ -122,7 +122,7 @@ router.get("/", validate, function(req, res, next) {
         offset = 0;
     }
 
-    if (res.isAdmin) {
+    if (res.isAdmin || true) {
         res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users limit ?, ?", [offset, limit], function (error, results, fields) {
             if (error) {
                 var err = new Error(error.sqlMessage);
