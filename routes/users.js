@@ -726,88 +726,146 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
         offset = 0;
     }
 
+    var output = [];
 
-    if (uid == userID) {
+    var hitError = false;
+    var query;
 
-        // Process the request from the perspective of a client modifying their own schedule
-        q = "SELECT * from schedule where client = ?";
-//	qd = "select dose.* from dose inner join schedule on dose.scheduleID = schedule.ID where schedule.client = ?";
 
-// "SELECT day, time, notificationTime, doseWindow FROM dose WHERE dose.scheduleID = ?";
-        res.locals.connection.query(q, userID, function(error, results, fields) {
-            if (error) {
-                var err = new Error(error.sqlMessage);
-                err.status = 500;
-                err.code = error.error;
-                err.error = error;
-                next(err);
-            } else {
-		console.log(fields);
-		/*res.locals.connection.query(qd, userID, function(error, results, fields) {
-		if (error){
-			console.log(results);
-			var err2 = new Error(error.sqlMessage);
-			err2.status = 500;
-			err2.code = error.error;
-			err2.error = error;
-			next(err2);
-		}
-		});*/
-		res.status(200);
-		//add dose schedule to results
-		//get SQL query as an admin first
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
-            }
-        });
-    } else if (res.isSupportWorker) {
-        // Process the request only if the support worker has authority over the clients schedule
-        q1 = "SELECT client FROM clientMappings WHERE supportWorker = ? AND client = ?";
-        q2 = "SELECT * FROM schedule WHERE client = (" + q1 + ")";
-        res.locals.connection.query(q2, [uid, userID], function(error, results, fields) {
-            if (error) {
-                var err = new Error(error.sqlMessage);
-                err.status = 500;
-                err.code = error.error;
-                err.error = error;
-                next(err);
-            } else {
-                res.status(200);
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
-            }
-        });
-    } else if (res.isAdmin) {
-        // Process the request immediately without question
-        q = "SELECT * from schedule where client = ?";
-        res.locals.connection.query(q, userID, function(error, results, fields) {
-            if (error) {
-                var err = new Error(error.sqlMessage);
-                err.status = 500;
-                err.code = error.error;
-                err.error = error;
-                next(err);
-            } else {
-                res.status(200);
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
-            }
-        });
-    } else {
-
-    // Process the request as if one client wants to access another clients schedule */
-    q1 = "SELECT clientID FROM  schedulePermissions WHERE observerID = ? AND clientID = ?";
-    q2 = "SELECT * from schedule where client = (" + q1 + ")";
-    res.locals.connection.query(q2, [uid, userID], function(error, results, fields) {
-      if (error) {
-        var err = new Error(error.sqlMessage);
-        err.status = 500;
-        err.code = error.error;
-        err.error = error;
-        next(err);
-      } else {
-          res.status(200);
-          res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
-      }
-    });
+    if (uid === userID || req.isAdmin) {
+        query = res.locals.connection.query('SELECT ID,drug,doseUnit,dose,createdByStaff,enabled,vacationUntil,createDate,startDate,endDate,notes FROM schedule where client=? limit ?, ?', [userID, offset, limit]);
     }
+    else if (req.supportWorker) {
+        query = res.locals.connection.query('SELECT ID,drug,doseUnit,dose,createdByStaff,enabled,vacationUntil,createDate,startDate,endDate,notes FROM schedule where client in (SELECT client FROM clientMappings WHERE supportWorker = ? AND client = ?) OR (client = ? and ID in (select scheduleID from schedulePermissions where clientID = ? and observerID = ? and (userAccepted = true or mandatory = true))) limit ?, ?', [uid, userID, userID, userID, uid, offset, limit]);
+
+    }
+    else {
+        query = res.locals.connection.query('SELECT ID,drug,doseUnit,dose,createdByStaff,enabled,vacationUntil,createDate,startDate,endDate,notes FROM schedule where client = ? and ID in (select scheduleID from schedulePermissions where clientID = ? and observerID = ? and (userAccepted = true or mandatory = true)) limit ?, ?', [userID, userID, uid, offset, limit]);
+    }
+
+
+    query.on('error', function(err) {
+        // Handle error, an 'end' event will be emitted after this as well
+        hitError = true;
+        var err1 = new Error(err.sqlMessage);
+        err1.status = 500;
+        err1.code = err.error;
+        err1.error = err;
+        next(err1);
+        //set error flag
+    })
+    .on('fields', function(fields) {
+        // the field packets for the rows to follow
+        // ignore this
+    })
+    .on('result', function(row) {
+        output.push(row);
+    })
+    .on('end', function() {
+        // all rows have been received
+
+        if (hitError) {
+            console.log("There was an error");
+            return;
+        }
+
+        var calls = [];
+
+        output.forEach(function(schedule) {
+            calls.push(function(callback){
+
+                res.locals.connection.query('SELECT doseID,day,time,notificationTime,doseWindow FROM dose where scheduleID=?', schedule.ID, function (error, results, fields) {
+
+                  if (error) {
+                    //handle error
+                    console.log(error);
+                    callback(error, results);
+                    return;
+                  }
+                  else {
+                      schedule.doses = results;
+                      callback(error, results);
+                  }
+                });
+            })
+        });
+
+        async.parallel(calls, function(error, result) {
+
+            if (error) {
+                var err = new Error(error.sqlMessage);
+                err.status = 500;
+                err.code = error.error;
+                err.error = error;
+
+                return res.locals.connection.rollback(function() {
+                    console.log('rollback');
+                    next(err);
+                });
+            }
+            else {
+                res.locals.connection.commit(function(err) {
+                    if (err) {
+                        return res.locals.connection.rollback(function() {
+                            console.log('rollback');
+
+                            var err1 = new Error(err.sqlMessage);
+                            err1.status = 500;
+                            err1.code = err.error;
+                            err1.error = err;
+                            next(err1);
+                        });
+                    }
+
+                    if (uid === userID || req.isAdmin) {
+                        res.locals.connection.query('SELECT count(*) as total FROM schedule where client=? limit ?, ?', [userID, offset, limit], function (error, results, fields) {
+
+                            if (error) {
+
+                                var err = new Error(error.sqlMessage);
+                                err.status = 500;
+                                err.code = error.error;
+                                err.error = error;
+                                next(err);
+                            }
+                            res.status(200);
+                            res.send(JSON.stringify({"status": 200, "error": null, "response": {"schedules": output, "limit": limit, "offset": offset, "total": results[0].total}}));
+                        });
+                    }
+                    else if (req.supportWorker) {
+                        res.locals.connection.query('SELECT count(*) as total FROM schedule where client in (SELECT client FROM clientMappings WHERE supportWorker = ? AND client = ?) OR (client = ? and ID in (select scheduleID from schedulePermissions where clientID = ? and observerID = ? and (userAccepted = true or mandatory = true))) limit ?, ?', [uid, userID, userID, userID, uid, offset, limit], function (error, results, fields) {
+
+                            if (error) {
+
+                                var err = new Error(error.sqlMessage);
+                                err.status = 500;
+                                err.code = error.error;
+                                err.error = error;
+                                next(err);
+                            }
+                            res.status(200);
+                            res.send(JSON.stringify({"status": 200, "error": null, "response": {"schedules": output, "limit": limit, "offset": offset, "total": results[0].total}}));
+                        });
+                    }
+                    else {
+                        res.locals.connection.query('SELECT count(*) as total FROM schedule where client = ? and ID in (select scheduleID from schedulePermissions where clientID = ? and observerID = ? and (userAccepted = true or mandatory = true)) limit ?, ?', [userID, userID, uid, offset, limit] , function (error, results, fields) {
+
+                            if (error) {
+
+                                var err = new Error(error.sqlMessage);
+                                err.status = 500;
+                                err.code = error.error;
+                                err.error = error;
+                                next(err);
+                            }
+                            res.status(200);
+                            res.send(JSON.stringify({"status": 200, "error": null, "response": {"schedules": output, "limit": limit, "offset": offset, "total": results[0].total}}));
+                        });
+                    }
+                });
+            }
+        });
+    });
 });
 
 /*------------------------------------------------------

@@ -203,7 +203,7 @@ router.post("/", validate, function(req,res,next) {
                   res.send({"status": 201, "error": null, "response": results});
                 });
             }
-        })
+        });
 
       });
     });
