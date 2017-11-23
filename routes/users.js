@@ -348,7 +348,7 @@ router.post("/", function(req, res, next) {
                 next(err);
             } else {
                 res.status(201);
-                res.send({"status": 200, "error": null, "response": results});
+                res.send({"status": 201, "error": null, "response": results});
             }
         });
     })
@@ -383,51 +383,83 @@ router.patch("/", validate, function(req, res, next) {
 
 
     var invalidFields = {};
+    var firebaseData = {};
+    var sqlData = {};
 
     if (req.body.first_name !== undefined && req.body.first_name.length >= 60) {
         invalidFields.first_name = "first_name is invalid \"" + req.body.first_name + "\"";
     }
+    else {
+        sqlData.firstname = req.body.first_name;
+    }
 
     if (req.body.last_name !== undefined && req.body.last_name.length >= 60) {
         invalidFields.last_name = "last_name is invalid \"" + req.body.last_name + "\"";
+    } else {
+        sqlData.lastname = req.body.last_name;
     }
 
     if (req.body.gender !== undefined && (req.body.gender > 3 || req.body.gender < 0)) {
         invalidFields.gender = "gender is invalid \"" + req.body.gender + "\"";
+    } else if  (req.body.gender !== undefined) {
+        sqlData.gender = req.body.gender;
     }
 
     if (req.body.email !== undefined && req.body.email.length >= 60) {
         invalidFields.email = "email is invalid \"" + req.body.email + "\"";
+    } else {
+        sqlData.email = req.body.email;
+        firebaseData.email = req.body.email;
     }
 
-    if (req.body.with_CLC !== undefined && (req.body.with_CLC.toUpperCase() !== "TRUE" && req.body.with_CLC.toUpperCase() !== "FALSE" )) {
+    if (req.body.with_CLC === undefined || req.body.with_CLC.toUpperCase() === "FALSE") {
+        sqlData.partOfCLC = false;
+    }
+    else if (req.body.with_CLC.toUpperCase() === "TRUE") {
+        sqlData.partOfCLC = true;
+    }
+    else {
         invalidFields.with_CLC = "with_CLC is invalid \"" + req.body.with_CLC + "\"";
     }
 
     if (req.body.display_name !== undefined && req.body.display_name.length >= 120) {
         invalidFields.display_name = "display_name is invalid \"" + req.body.display_name + "\"";
+    } else if (req.body.display_name !== undefined) {
+        sqlData.displayName = req.body.display_name;
     }
+
 
     var phoneFormat = /^\([0-9]{3}\)[0-9]{3}-[0-9]{4}$/;
 
     if (req.body.phone_number !== undefined && phoneFormat.test(req.body.phone_number) === false) {
         invalidFields.phone_number = "phone_number is invalid \"" + req.body.phone_number + "\"";
     }
+    else if (req.body.phone_number !== undefined) {
+        sqlData.phoneNumber = req.body.phone_number;
+    }
 
     if (req.body.recovery_q1 !== undefined && (req.body.recovery_q1.length === 0 || req.body.recovery_q1.length >= 250)) {
         invalidFields.recovery_q1 = "recovery_q1 is invalid \"" + req.body.recovery_q1 + "\"";
+    } else if (req.body.recovery_q1 !== undefined) {
+        sqlData.recoveryQ1 = req.body.recovery_q1;
     }
 
     if (req.body.recovery_a1 !== undefined && (req.body.recovery_a1.length === 0 || req.body.recovery_a1.length >= 250)) {
         invalidFields.recovery_a1 = "recovery_a1 is invalid \"" + req.body.recovery_a1 + "\"";
+    } else if (req.body.recovery_a1 !== undefined) {
+        sqlData.recoveryQ1 = req.body.recovery_a1;
     }
 
     if (req.body.recovery_q2 !== undefined && (req.body.recovery_q2.length === 0 || req.body.recovery_q2.length >= 250)) {
         invalidFields.recovery_q2 = "recovery_q2 is invalid \"" + req.body.recovery_q2 + "\"";
+    } else if (req.body.recovery_q2 !== undefined) {
+        sqlData.recoveryQ1 = req.body.recovery_q2;
     }
 
     if (req.body.recovery_a2 !== undefined && (req.body.recovery_a2.length === 0 || req.body.recovery_a2.length >= 250)) {
         invalidFields.recovery_a2 = "recovery_a2 is invalid \"" + req.body.recovery_a2 + "\"";
+    } else if (req.body.recovery_a2 !== undefined) {
+        sqlData.recoveryQ1 = req.body.recovery_a2;
     }
 
     //make sure that at least 1 field is being updated
@@ -441,62 +473,9 @@ router.patch("/", validate, function(req, res, next) {
         return;
     }
 
-    if (req.body.with_CLC.toUpperCase() !== "TRUE") {
-        req.body.with_CLC = true;
-    }
-    else if(req.body.with_CLC.toUpperCase() !== "FALSE" ) {
-        req.body.with_CLC = false;
-    }
-
-    var firebaseData = {};
-    var sqlData = {};
-    if (req.body.first_name !== undefined) {
-        sqlData.firstname = req.body.first_name;
-    }
-
-    if (req.body.last_name !== undefined) {
-        sqlData.lastname = req.body.last_name;
-    }
-
-    if (req.body.email !== undefined) {
-        sqlData.email = req.body.email;
-        firebaseData.email = req.body.email;
-    }
 
     if (req.body.birthday !== undefined) {
         sqlData.birthday = req.body.birthday;
-    }
-
-    if (req.body.display_name !== undefined) {
-        sqlData.displayName = req.body.display_name;
-    }
-
-    if (req.body.phone_number !== undefined) {
-        sqlData.phoneNumber = req.body.phone_number;
-    }
-
-    if (req.body.gender !== undefined) {
-        sqlData.gender = req.body.gender;
-    }
-
-    if (req.body.with_CLC !== undefined) {
-        sqlData.partOfCLC = req.body.with_CLC;
-    }
-
-    if (req.body.recovery_q1 !== undefined) {
-        sqlData.recoveryQ1 = req.body.recovery_q1;
-    }
-
-    if (req.body.recovery_a1 !== undefined) {
-        sqlData.recoveryA1 = req.body.recovery_a1;
-    }
-
-    if (req.body.recovery_q2 !== undefined) {
-        sqlData.recoveryQ2 = req.body.recovery_q2;
-    }
-
-    if (req.body.recovery_a1 !== undefined) {
-        sqlData.recoveryA2 = req.body.recovery_a1;
     }
 
 
