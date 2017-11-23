@@ -102,8 +102,41 @@ var validate = function (req, res, next){
 router.post("/", validate, function(req,res,next) {
 
     var curDate = mysql.raw('CURDATE()');
+
+    var userID = req.uid;
+
+
+    var dateFormat = /^[1-9][0-9]{3}\-(0[1-9]|1[12])\-(0[1-9]|[12][0-9]|3[01])$/;
+    var timeFormat = /^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;
+    var notificationFormat = /^-0[0123]:[0-5][0-9]:[0-5][0-9]$/;
+    var windowFormat = /^0[01234]:[0-5][0-9]:[0-5][0-9]$/;
+
+
+    var invalidFields = {};
+
+    if (req.body.drug_name === undefined || req.body.drug_name.length >= 256) {
+        invalidFields.drug_name = "drug_name is invalid \"" + req.body.drug_name + "\"";
+    }
+
+    if (req.body.dose_units === undefined || req.body.dose_units.length >= 60) {
+        invalidFields.dose_units = "dose_units is invalid \"" + req.body.dose_units + "\"";
+    }
+
+    if (req.body.dose_quantity === undefined || req.body.dose_quantity <= 0) {
+        invalidFields.dose_quantity = "dose_quantity is invalid \"" + req.body.dose_quantity + "\"";
+    }
+
+    if (req.body.start_date !== undefined && dateFormat.test(req.body.start_date) === false) {
+        invalidFields.start_date = "start_date is invalid \"" + req.body.start_date + "\"";
+    }
+
+    if (req.body.end_date !== undefined && dateFormat.test(req.body.end_date) === false) {
+        invalidFields.end_date = "end_date is invalid \"" + req.body.end_date + "\"";
+    }
+
+
     var data = {
-        client: req.uid,
+        client: userID,
         drug: req.body.drug_name,
         doseUnit: req.body.dose_units,
         dose: req.body.dose_quantity,
@@ -121,15 +154,48 @@ router.post("/", validate, function(req,res,next) {
     var dosesToInsert = [];
 
 
+
+    if (Object.keys(invalidFields).length !== 0)
+    {
+        invalidFields.dose_quantity = [];
+        invalidFields.time = [];
+        invalidFields.notification_offset = [];
+        invalidFields.dose_window = [];
+    }
+
     for (var i = 0; i < rawDoses.length; i++) {
         var dose = {};
+
+        if (rawDoses[i].day === undefined || rawDoses[i].day < 0 || rawDoses[i].day > 6) {
+            invalidFields.dose_quantity.push("dose.day is invalid \"" + rawDoses[i].day + "\"");
+        }
+        if (rawDoses[i].time === undefined || timeFormat.test(rawDoses[i].time) === false) {
+            invalidFields.time.push("dose.time is invalid \"" + rawDoses[i].time + "\"");
+        }
+        if (rawDoses[i].notification_offset !== undefined && (notificationFormat.test(rawDoses[i].notification_offset) === false)) {
+            invalidFields.notification_offset.push("dose.notification_offset is invalid \"" + rawDoses[i].notification_offset + "\"");
+        }
+        if (rawDoses[i].dose_window !== undefined && (windowFormat.test(rawDoses[i].dose_window) === false)) {
+            invalidFields.dose_window.push("dose.dose_window is invalid \"" + rawDoses[i].dose_window + "\"");
+        }
+
         dose.day = rawDoses[i].day;
         dose.time = rawDoses[i].time;
-        dose.notificationTime = rawDoses[i].notification_offset;
-        dose.doseWindow = rawDoses[i].dose_window;
+        dose.notificationTime = rawDoses[i].notification_offset || "-00:15:00";
+        dose.doseWindow = rawDoses[i].dose_window || "01:00:00";
         dosesToInsert.push(dose);
     }
 
+    //make sure that at least 1 field is being updated
+    if (Object.keys(invalidFields).length !== 0)
+    {
+        var err = new Error("Invalid fields given");
+        err.status = 400;
+        err.code = "bad-req";
+        err.error = invalidFields;
+        next(err);
+        return;
+    }
 
     res.locals.connection.beginTransaction(function(err) {
       if (err) {
@@ -206,7 +272,7 @@ router.post("/", validate, function(req,res,next) {
                   }
                 });
             }
-        })
+        });
 
       });
     });
