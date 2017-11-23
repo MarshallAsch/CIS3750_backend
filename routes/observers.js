@@ -93,9 +93,9 @@ var validate = function (req, res, next){
 
 
 /**
- * This endpoint is used to  get all of the clients that are managed by a specific
- * support worker. This can only be used by admins, and a support worker asking for
- * their own data
+ * This endpoint is used to  get all of the users who are observing the authenticated
+ * user.
+ * This is a convience endpoint for /users/{userID}/observers
  *
  * This requires the user to be authenticated.
  *
@@ -104,9 +104,10 @@ var validate = function (req, res, next){
  * @param   next callback that will cause the next middlewhere function to be executed.
  * @return       none
  */
-router.get("/:supportWorker/clients", validate, function(req,res,next) {
+router.get("/", validate, function(req,res,next) {
     res.setHeader("Content-Type", "application/json");
-    var supportWorker = req.params.supportWorker;
+
+    var userID = req.uid;
 
     var limit = parseInt(req.query.limit, 10) || 20;
     var offset = parseInt(req.query.offset, 10) || 0;
@@ -123,48 +124,101 @@ router.get("/:supportWorker/clients", validate, function(req,res,next) {
     }
 
 
-    if (req.isAdmin || req.uid === supportWorker) {
+    //can see your support workers, anyone who is observing you and anyone who you are observing
+    res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID in (select observer from userPermissions where client = ?) limit ?, ?", [userID, offset, limit], function (error, results, fields) {
+        if (error) {
+            var err = new Error(error.sqlMessage);
+            err.status = 500;
+            err.code = error.error;
+            err.error = error;
+            next(err);
+            return;
+        }
 
-        //can see your support workers, anyone who is observing you and anyone who you are observing
-        res.locals.connection.query("SELECT ID,userRole,birthday,createTime,firstname,lastname,displayName,phoneNumber,email from users where ID in (select client from clientMappings where supportWorker = ? ) limit ?, ?", [supportWorker, offset, limit], function (error, results, fields) {
+        var observers = results;
+
+        res.locals.connection.query("SELECT count(*) AS total from userPermissions where client = ? ", userID, function (error, results, fields) {
             if (error) {
+
                 var err = new Error(error.sqlMessage);
                 err.status = 500;
                 err.code = error.error;
                 err.error = error;
                 next(err);
+            }
+            else {
+                res.status(200);
+                res.send({"status": 200, "error": null, "response": {"observers": observers, "limit": limit, "offset": offset, "total": results[0].total}});
+            }
+        });
+    });
+});
+
+/**
+ * This endpoint is used to set a new observer on the authenticated user
+ * This is a convience endpoint for /users/{userID}/observers
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
+router.post("/", validate, function(req,res,next) {
+    res.setHeader("Content-Type", "application/json");
+    var userID = req.uid;
+
+    var userToGrantEmail = req.body.user_email;
+
+    var toInsert = {
+        client: userID,
+        observer:userToGrant
+    };
+
+    res.locals.connection.query("select ID from users where email = ?", [userToGrantEmail], function(error, results, fields) {
+
+        if (error) {
+            var err = new Error(error.sqlMessage);
+            err.status = 500;
+            err.code = error.error;
+            err.error = error;
+            next(err);
+        } else {
+
+            if (results.length === 0) {
+                var err = new Error("User not found with email address \"" + userToGrantEmail + "\"");
+                err.status = 500;
+                err.code = "not-found";
+                next(err);
                 return;
             }
 
-            var users = results;
+            var toInsert = {
+                client: userID,
+                observer: results[0].ID
+            };
 
-            res.locals.connection.query("SELECT count(*) AS total FROM clientMappings WHERE supportWorker = ?", supportWorker, function (error, results, fields) {
+            res.locals.connection.query("insert into userPermissions set ?", toInsert, function(error, results, fields) {
+
                 if (error) {
-
                     var err = new Error(error.sqlMessage);
                     err.status = 500;
                     err.code = error.error;
                     err.error = error;
                     next(err);
-                }
-                else {
-                    res.status(200);
-                    res.send({"status": 200, "error": null, "response": {"users": users, "limit": limit, "offset": offset, "total": results[0].total}});
+                } else {
+                    res.status(201);
+                    res.send(JSON.stringify({"status": 201, "error": null, "response": results}));
                 }
             });
-        });
-    }
-    else {
-        var err = new Error("You do not have permission to perform this action.");
-        err.status = 403;
-        err.code = "permission-denied";
-        next(err);
-    }
+        }
+    });
 });
 
 /**
- * This endpoint is used to  create a new mapping between a support worker and a
- * client. This can only be used by an administrator.
+ * This endpoint is used to  remove a mapping between a client and an observer.
+ * This is a convience end point to remove a user from observing you
  *
  * This requires the user to be authenticated.
  *
@@ -173,74 +227,26 @@ router.get("/:supportWorker/clients", validate, function(req,res,next) {
  * @param   next callback that will cause the next middlewhere function to be executed.
  * @return       none
  */
-router.post("/:supportWorker/users/:clientID", validate, function(req,res,next) {
+router.delete("/:observerID", validate, function(req,res,next) {
     res.setHeader("Content-Type", "application/json");
-    var clientID = req.params.clientID;
-    var supportWorker = req.params.supportWorker;
 
-    if(req.isAdmin) {
-        var q = "INSERT INTO clientMappings (client, supportWorker) VALUES (?,?) ";
-        res.locals.connection.query(q, [clientID, supportWorker], function(error, results, fields) {
+    var userID = req.uid;
+    var observerID = req.params.observerID;
 
-            if (error) {
-                var err = new Error(error.sqlMessage);
-                err.status = 500;
-                err.code = error.error;
-                err.error = error;
-                next(err);
-            } else {
-                res.status(200);
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
-            }
-        });
+    var q = "delete from userPermissions where client=? and observer=?";
+    res.locals.connection.query(q, [userID, observerID], function(error, results, fields) {
 
-    } else {
-        var err = new Error("You do not have permission to delete this user");
-        err.status = 403;
-        err.code = "permission-denied";
-        next(err);
-    }
-});
-
-/**
- * This endpoint is used to  remove a mapping between a support worker and a
- * client. This can only be used by an administrator or by the support worker
- * removing one of their own clients.
- *
- * This requires the user to be authenticated.
- *
- * @param   req  the http request object that is being handled
- * @param   res  the responce object that will eventually be sent back the client
- * @param   next callback that will cause the next middlewhere function to be executed.
- * @return       none
- */
-router.delete("/:supportWorker/users/:clientID", validate, function(req,res,next) {
-    res.setHeader("Content-Type", "application/json");
-    var clientID = req.params.clientID;
-    var supportWorker = req.params.supportWorker;
-
-    if(req.isAdmin || req.uid === supportWorker) {
-        var q = "delete from clientMappings where client=? and supportWorker=?";
-        res.locals.connection.query(q, [clientID, supportWorker], function(error, results, fields) {
-
-            if (error) {
-                var err = new Error(error.sqlMessage);
-                err.status = 500;
-                err.code = error.error;
-                err.error = error;
-                next(err);
-            } else {
-                res.status(200);
-                res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
-            }
-        });
-
-    } else {
-        var err = new Error("You do not have permission to delete this user");
-        err.status = 403;
-        err.code = "permission-denied";
-        next(err);
-    }
+        if (error) {
+            var err = new Error(error.sqlMessage);
+            err.status = 500;
+            err.code = error.error;
+            err.error = error;
+            next(err);
+        } else {
+            res.status(200);
+            res.send(JSON.stringify({"status": 200, "error": null, "response": results}));
+        }
+    });
 });
 
 
