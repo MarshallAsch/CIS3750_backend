@@ -855,7 +855,6 @@ router.get("/:userID/schedules", validate, function(req,res,next) {
     });
 });
 
-
 /**
  * This endpoint is used to  create a new schedule for a the currently authenticated user.
  * Depending on who you are logged in as you may not be able to create a schedule
@@ -1164,7 +1163,6 @@ router.post("/:userID/schedules", validate, function(req,res,next) {
     }
 });
 
-
 /**
  * This endpoint is used to get a specific schedule for a specific user.
  * Depending on the user permissions a different set of results will be shown.
@@ -1311,7 +1309,6 @@ router.get("/:userID/schedules/:scheduleID", validate, function(req,res,next) {
         });
     }
 });
-
 
 /**
  * This endpoint is used to  delete a  schedule for a specific user.

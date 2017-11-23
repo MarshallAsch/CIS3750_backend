@@ -93,7 +93,18 @@ var validate = function (req, res, next){
 
 
 
-
+/**
+ * This endpoint is used to  get all of the clients that are managed by a specific
+ * support worker. This can only be used by admins, and a support worker asking for
+ * their own data
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.get("/:supportWorker/clients", validate, function(req,res,next) {
     res.setHeader("Content-Type", "application/json");
     var supportWorker = req.params.supportWorker;
@@ -152,10 +163,17 @@ router.get("/:supportWorker/clients", validate, function(req,res,next) {
     }
 });
 
-
-/*------------------------------------------------------
-** ASSIGN CLIENT 2 SUPPORT WORKER ----------------------
-**------------------------------------------------------*/
+/**
+ * This endpoint is used to  create a new mapping between a support worker and a
+ * client. This can only be used by an administrator.
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.post("/:supportWorker/users/:clientID", validate, function(req,res,next) {
     res.setHeader("Content-Type", "application/json");
     var clientID = req.params.clientID;
@@ -185,12 +203,24 @@ router.post("/:supportWorker/users/:clientID", validate, function(req,res,next) 
     }
 });
 
+/**
+ * This endpoint is used to  remove a mapping between a support worker and a
+ * client. This can only be used by an administrator or by the support worker
+ * removing one of their own clients.
+ *
+ * This requires the user to be authenticated.
+ *
+ * @param   req  the http request object that is being handled
+ * @param   res  the responce object that will eventually be sent back the client
+ * @param   next callback that will cause the next middlewhere function to be executed.
+ * @return       none
+ */
 router.delete("/:supportWorker/users/:clientID", validate, function(req,res,next) {
     res.setHeader("Content-Type", "application/json");
     var clientID = req.params.clientID;
     var supportWorker = req.params.supportWorker;
 
-    if(req.isAdmin) {
+    if(req.isAdmin || req.uid === supportWorker) {
         var q = "delete from clientMappings where client=? and supportWorker=?";
         res.locals.connection.query(q, [clientID, supportWorker], function(error, results, fields) {
 
