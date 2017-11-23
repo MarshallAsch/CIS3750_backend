@@ -171,10 +171,6 @@ router.post("/", validate, function(req,res,next) {
 
     var userToGrantEmail = req.body.user_email;
 
-    var toInsert = {
-        client: userID,
-        observer:userToGrant
-    };
 
     res.locals.connection.query("select ID from users where email = ?", [userToGrantEmail], function(error, results, fields) {
 
