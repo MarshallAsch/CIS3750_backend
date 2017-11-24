@@ -1,7 +1,7 @@
 var express = require("express");
 var router = express.Router();
 var async = require("async");
-
+var mysql = require("mysql");
 
 /**
  * This middleware functon will validate the users tokenID that was sent in the
