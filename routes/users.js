@@ -865,6 +865,8 @@ router.post("/:userID/schedules", validate, function(req,res,next) {
 
 
     var invalidFields = {};
+    var rawDoses = req.body.doses || [];
+    var dosesToInsert = [];
 
     if (req.body.drug_name === undefined || req.body.drug_name.length >= 256) {
         invalidFields.drug_name = "drug_name is invalid \"" + req.body.drug_name + "\"";
@@ -908,8 +910,7 @@ router.post("/:userID/schedules", validate, function(req,res,next) {
         data.notes = req.body.notes
     }
 
-    var rawDoses = req.body.doses || [];
-    var dosesToInsert = [];
+
 
 
 
