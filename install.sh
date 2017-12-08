@@ -20,36 +20,47 @@ fi
 
 npm install
 
-
 echo "if you are running this on the server that has already had the database created exit here."
 
 echo -n "SQL root username(): "
 read rootUser
 echo -n "SQL root password(): "
 read rootPass
+echo ""
 
+echo -n "Database host(localhost): "
+read DBHOST
+echo -n "Database port number(3306): "
+read DBPORT
+echo -n "Database name(cis3750): "
+read DBNAME
+
+echo ""
 echo -n "Database username(cis3750_node): "
 read DBUSERNAME
 echo -n "Database password(team31): "
 read DBPASSWORD
 
-echo -n "Database host(localhost): "
-read DBHOST
+echo -n "node server Port Number (3000): "
+read PORT
 
-echo -n "Database name(cis3750): "
-read DBNAME
+echo -n "Firebase .json file(): "
+read FIREBASEACC
+echo -n "Firebase database URL(): "
+read FIREBASEDB
 
-echo ""
-echo -n "Database testing username(cis3750_node_test): "
-read DBUSERNAME_TEST
-echo -n "Database testing password(team31): "
-read DBPASSWORD_TEST
 
-echo -n "Database testing name(cis3750_test): "
-read DBNAME_TEST
 
 if [[ -z "$DBHOST" ]]; then
     DBHOST="localhost"
+fi
+
+if [[ -z "$DBPORT" ]]; then
+    DBPORT="3306"
+fi
+
+if [[ -z "$PORT" ]]; then
+    PORT="3000"
 fi
 
 if [[ -z "$DBUSERNAME" ]]; then
@@ -64,28 +75,27 @@ if [[ -z "$DBNAME" ]]; then
     DBNAME="cis3750"
 fi
 
-if [[ -z "$DBUSERNAME_TEST" ]]; then
-    DBUSERNAME_TEST="cis3750_node_test"
+if [[ -z "$FIREBASEACC" ]]; then
+    FIREBASEACC="cis3750team31-firebase-adminsdk-sm0bf-189b38796f.json"
 fi
 
-if [[ -z "$DBPASSWORD_TEST" ]]; then
-    DBPASSWORD_TEST="team31"
+if [[ -z "$FIREBASEDB" ]]; then
+    FIREBASEDB="https://cis3750team31.firebaseio.com"
 fi
 
-if [[ -z "$DBNAME_TEST" ]]; then
-    DBNAME_TEST="cis3750_test"
-fi
 
-# replace the username and password in the script with the ones given here
+sed -e "s/{{PORT}}/$PORT/g"  \
+-e "s/{{DBPORT}}/$DBPORT/g"  \
+-e "s/{{DBHOST}}/$DBHOST/g"  \
+-e "s/{{DBNAME}}/$DBNAME/g" \
+-e "s/{{DBUSERNAME}}/$DBUSERNAME/g" \
+-e "s/{{DBPASSWORD}}/$DBPASSWORD/g" \
+-e "s/{{FIREBASEACC}}/$FIREBASEACC/g"\
+-e "s/{{FIREBASEDB}}/$FIREBASEDB/g" config.env.example > config.env
+
 
 # create production database
 TEMP=`mktemp` || exit 1
 sed -e "s/{{USERNAME}}/$DBUSERNAME/g" -e "s/{{PASSWORD}}/$DBPASSWORD/g"  -e "s/{{DATABASE}}/$DBNAME/g" script.sql > $TEMP
-cat $TEMP
-mysql -u $rootUser --host $DBHOST -p$rootPass < $TEMP
-
-# create test database
-TEMP=`mktemp` || exit 1
-sed -e "s/{{USERNAME}}/$DBUSERNAME_TEST/g" -e "s/{{PASSWORD}}/$DBPASSWORD_TEST/g"  -e "s/{{DATABASE}}/$DBNAME_TEST/g" script.sql > $TEMP
 cat $TEMP
 mysql -u $rootUser --host $DBHOST -p$rootPass < $TEMP

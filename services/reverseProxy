@@ -1,0 +1,28 @@
+
+# This is the revere nginx proxy for this server. Using this moves
+# the task of using SSL easer and away from node.
+# This needs to bind to the public IP address only and redirect to localhost
+#
+server {
+    listen publicip:3000 ssl;
+    server_name cis3750.marshallasch.ca;
+
+
+    # SSL configuration
+
+    # HSTS (ngx_http_headers_module is required) (15768000 seconds = 6 months)
+        add_header Strict-Transport-Security max-age=15768000;
+
+
+    location / {
+        proxy_set_header    X-Real-IP  $remote_addr;
+        proxy_set_header    X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header    Host $http_host;
+        proxy_redirect      off;
+        proxy_pass_request_headers      on;
+        proxy_pass          http://127.0.0.1:3000;
+    }
+
+    ssl_certificate /path/to/public/key.pem;
+    ssl_certificate_key /path/to/private/key.pem;
+}
