@@ -3,11 +3,15 @@
 # This is a systemd service
 # This gets put in /etc/systemd/system/
 #
+# enable with sudo systemctl enable server.service
+#
 # This is controlled by using
 # sudo systemctl [start|stop|restart|status] server.service
 #
 #
 # To view the log use the journalctl command
+#
+# See https://www.axllent.org/docs/view/nodejs-service-with-systemd/ for more info
 #
 
 [Unit]

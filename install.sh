@@ -7,8 +7,14 @@ echo "initializing..."
 if command -v node >/dev/null 2>&1 ; then
     echo "node found version: $(node -v)"
 else
-    echo -e "\e[31mnode.js is required, ending...\e[39m"
-    exit
+    echo "node not found checking for nodejs ..."
+    # make sure that the required programs are installed
+    if command -v nodejs >/dev/null 2>&1 ; then
+        echo "node found version: $(nodejs -v)"
+    else
+        echo -e "\e[31mnode.js is required, ending...\e[39m"
+        exit
+    fi
 fi
 
 if command -v mysql >/dev/null 2>&1 ; then

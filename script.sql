@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS `schedule` (
 	`vacationUntil` DATE,
 	`createDate` DATETIME NOT NULL DEFAULT NOW(),
 	`startDate` DATE not null,
-	`endDate` DATE set default '9999-12-31',
+	`endDate` DATE default '9999-12-31',
 	`notes` TEXT,
 	PRIMARY KEY (`ID`),
 	CONSTRAINT `schedule_fk0` FOREIGN KEY (`client`) REFERENCES `users`(`ID`)
@@ -90,9 +90,9 @@ CREATE TABLE IF NOT EXISTS `schedulePermissions` (
 	`clientID` varchar(37) NOT NULL,
 	`userAccepted` bool NOT NULL DEFAULT  FALSE,
 	`mandatory` bool NOT NULL DEFAULT FALSE,
-	PRIMARY KEY (`scheduleID`,`userID`,`clientID`),
+	PRIMARY KEY (`scheduleID`,`observerID`,`clientID`),
 	CONSTRAINT `schedulePermissions_fk0` FOREIGN KEY (`scheduleID`) REFERENCES `schedule`(`ID`),
-	CONSTRAINT `schedulePermissions_fk1` FOREIGN KEY (`userID`) REFERENCES `users`(`ID`),
+	CONSTRAINT `schedulePermissions_fk1` FOREIGN KEY (`observerID`) REFERENCES `users`(`ID`),
 	CONSTRAINT `schedulePermissions_fk2` FOREIGN KEY (`clientID`) REFERENCES `users`(`ID`)
 ) ENGINE=INNODB;
 
